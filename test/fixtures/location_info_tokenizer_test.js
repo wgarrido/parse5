@@ -17,14 +17,14 @@ exports['Location info (Tokenizer)'] = function () {
                 '</head>', '\n',
                 '<body id="front">', '\n',
                 '<div id="intro">',
-                '\n   ', '<p>',
+                '\n   ', '<p\n>',
                 '\n       ', 'Node.js', ' ', 'is', ' ', 'a',
                 '\n       ', 'platform', ' ', 'built', ' ', 'on',
                 '\n       ', '<a href="http://code.google.com/p/v8/">',
                 '\n       ', 'Chrome\'s', ' ', 'JavaScript', ' ', 'runtime',
                 '\n       ', '</a>', '\n',
                 '</div>',
-                '<body>'
+                '</body>'
             ]
         },
         {
