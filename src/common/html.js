@@ -1,4 +1,4 @@
-const NS = exports.NAMESPACES = {
+const NS = {
     HTML: 'http://www.w3.org/1999/xhtml',
     MATHML: 'http://www.w3.org/1998/Math/MathML',
     SVG: 'http://www.w3.org/2000/svg',
@@ -6,6 +6,8 @@ const NS = exports.NAMESPACES = {
     XML: 'http://www.w3.org/XML/1998/namespace',
     XMLNS: 'http://www.w3.org/2000/xmlns/'
 };
+
+export { NS as NAMESPACES };
 
 export const ATTRS = {
     TYPE: 'type',
@@ -24,7 +26,7 @@ export const DOCUMENT_MODE = {
     LIMITED_QUIRKS: 'limited-quirks'
 };
 
-const $ = exports.TAG_NAMES = {
+const $ = {
     A: 'a',
     ADDRESS: 'address',
     ANNOTATION_XML: 'annotation-xml',
@@ -171,7 +173,9 @@ const $ = exports.TAG_NAMES = {
     XMP: 'xmp'
 };
 
-const SPECIAL_ELEMENTS = exports.SPECIAL_ELEMENTS = Object.create(null);
+export { $ as TAG_NAMES };
+
+export const SPECIAL_ELEMENTS = Object.create(null);
 
 SPECIAL_ELEMENTS[NS.HTML] = Object.create(null);
 SPECIAL_ELEMENTS[NS.HTML][$.ADDRESS] = true;

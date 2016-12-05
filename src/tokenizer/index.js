@@ -173,7 +173,7 @@ function findNamedEntityTreeBranch(nodeIx, cp) {
 
 
 //Tokenizer
-class Tokenizer {
+export default class Tokenizer {
     constructor(options) {
         this.preprocessor = new Preprocessor();
 
@@ -2149,5 +2149,3 @@ _[CDATA_SECTION_STATE] = function cdataSectionState(cp) {
         }
     }
 };
-
-export default Tokenizer;

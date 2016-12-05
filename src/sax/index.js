@@ -1,6 +1,5 @@
 import { Transform as TransformStream } from 'stream';
 import DevNullStream from './dev_null_stream';
-import util from 'util';
 import Tokenizer from '../tokenizer';
 import ParserFeedbackSimulator from './parser_feedback_simulator';
 import mergeOptions from '../common/merge_options';
@@ -9,7 +8,7 @@ const DEFAULT_OPTIONS = {
     locationInfo: false
 };
 
-class SAXParser extends TransformStream {
+export default class SAXParser extends TransformStream {
     constructor(options) {
         super();
 
@@ -109,5 +108,3 @@ class SAXParser extends TransformStream {
         }
     }
 }
-
-export default SAXParser;

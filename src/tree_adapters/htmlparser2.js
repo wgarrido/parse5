@@ -131,7 +131,7 @@ const createTextNode = value => new Node({
 
 
 //Tree mutation
-const appendChild = exports.appendChild = (parentNode, newNode) => {
+export function appendChild(parentNode, newNode) {
     const prev = parentNode.children[parentNode.children.length - 1];
 
     if (prev) {
@@ -141,9 +141,9 @@ const appendChild = exports.appendChild = (parentNode, newNode) => {
 
     parentNode.children.push(newNode);
     newNode.parent = parentNode;
-};
+}
 
-const insertBefore = exports.insertBefore = (parentNode, newNode, referenceNode) => {
+export function insertBefore(parentNode, newNode, referenceNode) {
     const insertionIdx = parentNode.children.indexOf(referenceNode);
     const prev = referenceNode.prev;
 
@@ -157,7 +157,7 @@ const insertBefore = exports.insertBefore = (parentNode, newNode, referenceNode)
 
     parentNode.children.splice(insertionIdx, 0, newNode);
     newNode.parent = parentNode;
-};
+}
 
 export function setTemplateContent(templateElement, contentElement) {
     appendChild(templateElement, contentElement);

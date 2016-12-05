@@ -304,7 +304,7 @@ _[AFTER_AFTER_FRAMESET_MODE][Tokenizer.EOF_TOKEN] = stopParsing;
 
 
 //Parser
-class Parser {
+export default class Parser {
     constructor(options) {
         this.options = mergeOptions(DEFAULT_OPTIONS, options);
 
@@ -2817,5 +2817,3 @@ function endTagInForeignContent(p, token) {
         }
     }
 }
-
-export default Parser;

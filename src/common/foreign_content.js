@@ -97,7 +97,7 @@ const XML_ATTRS_ADJUSTMENT_MAP = {
 };
 
 //SVG tag names adjustment map
-const SVG_TAG_NAMES_ADJUSTMENT_MAP = exports.SVG_TAG_NAMES_ADJUSTMENT_MAP = {
+export const SVG_TAG_NAMES_ADJUSTMENT_MAP = {
     'altglyph': 'altGlyph',
     'altglyphdef': 'altGlyphDef',
     'altglyphitem': 'altGlyphItem',

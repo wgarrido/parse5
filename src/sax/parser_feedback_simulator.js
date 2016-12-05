@@ -11,7 +11,7 @@ const NS = HTML.NAMESPACES;
 
 //ParserFeedbackSimulator
 //Simulates adjustment of the Tokenizer which performed by standard parser during tree construction.
-class ParserFeedbackSimulator {
+export default class ParserFeedbackSimulator {
     constructor(tokenizer) {
         this.tokenizer = tokenizer;
 
@@ -151,5 +151,3 @@ class ParserFeedbackSimulator {
             foreignContent.adjustTokenSVGTagName(token);
     }
 }
-
-export default ParserFeedbackSimulator;

@@ -22,7 +22,7 @@ const LT_REGEX = /</g;
 const GT_REGEX = />/g;
 
 //Serializer
-class Serializer {
+export default class Serializer {
     constructor(node, options) {
         this.options = mergeOptions(DEFAULT_OPTIONS, options);
         this.treeAdapter = this.options.treeAdapter;
@@ -160,6 +160,3 @@ Serializer.escapeString = (str, attrMode) => {
 
     return str;
 };
-
-
-export default Serializer;

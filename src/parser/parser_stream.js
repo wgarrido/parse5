@@ -1,8 +1,7 @@
 import { Writable as WritableStream } from 'stream';
-import util from 'util';
 import Parser from './index';
 
-class ParserStream extends WritableStream {
+export default class ParserStream extends WritableStream {
     constructor(options) {
         super();
 
@@ -71,5 +70,3 @@ class ParserStream extends WritableStream {
             this._runParsingLoop();
     }
 }
-
-export default ParserStream;

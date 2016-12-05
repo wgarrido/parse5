@@ -82,7 +82,7 @@ function isScopingElement(tn, ns) {
 }
 
 //Stack of open elements
-class OpenElementStack {
+export default class OpenElementStack {
     constructor(document, treeAdapter) {
         this.stackTop = -1;
         this.items = [];
@@ -394,5 +394,3 @@ class OpenElementStack {
             this.pop();
     }
 }
-
-export default OpenElementStack;
