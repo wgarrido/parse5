@@ -95,15 +95,16 @@ const LIMITED_QUIRKS_WITH_SYSTEM_ID_PUBLIC_ID_PREFIXES = LIMITED_QUIRKS_PUBLIC_I
     '-//W3C//DTD HTML 4.01 Transitional//'
 ]);
 
+export type DoctypeId = string | null;
 
 //Utils
-function enquoteDoctypeId(id) {
+function enquoteDoctypeId(id: string) {
     const quote = id.indexOf('"') !== -1 ? '\'' : '"';
 
     return quote + id + quote;
 }
 
-function hasPrefix(publicId, prefixes) {
+function hasPrefix(publicId: string, prefixes: string[]) {
     for (let i = 0; i < prefixes.length; i++) {
         if (publicId.indexOf(prefixes[i]) === 0)
             return true;
@@ -114,7 +115,7 @@ function hasPrefix(publicId, prefixes) {
 
 
 //API
-export function getDocumentMode(name, publicId, systemId) {
+export function getDocumentMode(name: string, publicId: DoctypeId, systemId: DoctypeId) {
     if (name !== VALID_DOCTYPE_NAME)
         return DOCUMENT_MODE.QUIRKS;
 
@@ -141,7 +142,7 @@ export function getDocumentMode(name, publicId, systemId) {
     return DOCUMENT_MODE.NO_QUIRKS;
 }
 
-export function serializeContent(name, publicId, systemId) {
+export function serializeContent(name: string, publicId: DoctypeId, systemId: DoctypeId) {
     let str = '!DOCTYPE ';
 
     if (name)
