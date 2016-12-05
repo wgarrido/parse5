@@ -1,7 +1,7 @@
 'use strict';
 
 var assert = require('assert'),
-    SAXParser = require('../../lib').SAXParser,
+    SAXParser = require('../../lib/sax').default,
     testUtils = require('../test_utils');
 
 exports['Location info (SAX)'] = function () {

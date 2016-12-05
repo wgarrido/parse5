@@ -2,9 +2,9 @@
 
 var fs = require('fs'),
     path = require('path'),
-    parse5 = require('../lib/index'),
+    parse5 = require('../lib'),
     HTML = require('../lib/common/html'),
-    Tokenizer = require('../lib/tokenizer');
+    Tokenizer = require('../lib/tokenizer').default;
 
 function addSlashes(str) {
     return str

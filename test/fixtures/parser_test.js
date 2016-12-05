@@ -3,7 +3,7 @@
 var assert = require('assert'),
     path = require('path'),
     parse5 = require('../../lib'),
-    Parser = require('../../lib/parser'),
+    Parser = require('../../lib/parser').default,
     testUtils = require('../test_utils');
 
 function getFullTestName(test) {

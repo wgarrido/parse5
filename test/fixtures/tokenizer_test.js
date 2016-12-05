@@ -3,9 +3,9 @@
 var assert = require('assert'),
     fs = require('fs'),
     path = require('path'),
-    Tokenizer = require('../../lib/tokenizer'),
+    Tokenizer = require('../../lib/tokenizer').default,
     testUtils = require('../test_utils'),
-    ParserFeedbackSimulator = require('../../lib/sax/parser_feedback_simulator');
+    ParserFeedbackSimulator = require('../../lib/sax/parser_feedback_simulator').default;
 
 function tokenize(chunks, initialState, lastStartTag, withFeedback) {
     var tokenizer = new Tokenizer(),

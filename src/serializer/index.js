@@ -1,12 +1,7 @@
-import defaultTreeAdapter from '../tree_adapters/default';
-import doctype from '../common/doctype';
+import * as defaultTreeAdapter from '../tree_adapters/default';
+import { serializeContent } from '../common/doctype';
 import mergeOptions from '../common/merge_options';
-import HTML from '../common/html';
-
-//Aliases
-const $ = HTML.TAG_NAMES;
-
-const NS = HTML.NAMESPACES;
+import { TAG_NAMES as $, NAMESPACES as NS } from '../common/html';
 
 //Default serializer options
 const DEFAULT_OPTIONS = {
@@ -88,7 +83,7 @@ export default class Serializer {
 
         for (let i = 0, attrsLength = attrs.length; i < attrsLength; i++) {
             const attr = attrs[i];
-            const value = Serializer.escapeString(attr.value, true);
+            const value = escapeString(attr.value, true);
 
             this.html += ' ';
 
@@ -129,7 +124,7 @@ export default class Serializer {
             this.html += content;
 
         else
-            this.html += Serializer.escapeString(content, false);
+            this.html += escapeString(content, false);
     }
 
     _serializeCommentNode(node) {
@@ -139,12 +134,12 @@ export default class Serializer {
     _serializeDocumentTypeNode(node) {
         const name = this.treeAdapter.getDocumentTypeNodeName(node);
 
-        this.html += `<${doctype.serializeContent(name, null, null)}>`;
+        this.html += `<${serializeContent(name, null, null)}>`;
     }
 }
 
 // NOTE: exported as static method for the testing purposes
-Serializer.escapeString = (str, attrMode) => {
+export function escapeString(str, attrMode) {
     str = str
         .replace(AMP_REGEX, '&amp;')
         .replace(NBSP_REGEX, '&nbsp;');
@@ -159,4 +154,4 @@ Serializer.escapeString = (str, attrMode) => {
     }
 
     return str;
-};
+}

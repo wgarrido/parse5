@@ -1,11 +1,6 @@
 import OpenElementStack from '../parser/open_element_stack';
 import Tokenizer from '../tokenizer';
-import HTML from '../common/html';
-
-
-//Aliases
-const $ = HTML.TAG_NAMES;
-
+import { TAG_NAMES as $ } from '../common/html';
 
 function setEndLocation(element, closingToken, treeAdapter) {
     const loc = element.__location;

@@ -2,7 +2,7 @@
 
 var assert = require('assert'),
     HTML = require('../../lib/common/html'),
-    FormattingElementList = require('../../lib/parser/formatting_element_list'),
+    FormattingElementList = require('../../lib/parser/formatting_element_list').default,
     testUtils = require('../test_utils');
 
 //Aliases

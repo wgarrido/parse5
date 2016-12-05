@@ -1,5 +1,7 @@
 import Parser from './parser';
 import Serializer from './serializer';
+import * as defaultTreeAdapter from './tree_adapters/default';
+import * as htmlparser2TreeAdapter from './tree_adapters/htmlparser2';
 
 // Shorthands
 export function parse(html, options) {
@@ -28,13 +30,13 @@ export function serialize(node, options) {
 
 // Tree adapters
 export const treeAdapters = {
-    default: require('./tree_adapters/default'),
-    htmlparser2: require('./tree_adapters/htmlparser2')
+    default: defaultTreeAdapter,
+    htmlparser2: htmlparser2TreeAdapter
 };
 
 // Streaming
-export const ParserStream = require('./parser/parser_stream');
+export { default as ParserStream } from './parser/parser_stream';
 
-export const PlainTextConversionStream = require('./parser/plain_text_conversion_stream');
-export const SerializerStream = require('./serializer/serializer_stream');
-export const SAXParser = require('./sax');
+export { default as PlainTextConversionStream } from './parser/plain_text_conversion_stream';
+export { default as SerializerStream } from './serializer/serializer_stream';
+export { default as SAXParser } from './sax';

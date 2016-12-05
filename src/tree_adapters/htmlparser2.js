@@ -1,6 +1,5 @@
-import doctype from '../common/doctype';
+import { serializeContent } from '../common/doctype';
 import { DOCUMENT_MODE } from '../common/html';
-
 
 //Conversion tables for DOM Level1 structure emulation
 const nodeTypes = {
@@ -168,7 +167,7 @@ export function getTemplateContent(templateElement) {
 }
 
 export function setDocumentType(document, name, publicId, systemId) {
-    const data = doctype.serializeContent(name, publicId, systemId);
+    const data = serializeContent(name, publicId, systemId);
     let doctypeNode = null;
 
     for (let i = 0; i < document.children.length; i++) {

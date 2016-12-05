@@ -2,7 +2,7 @@
 
 var path = require('path'),
     assert = require('assert'),
-    ParserStream = require('../../lib').ParserStream,
+    ParserStream = require('../../lib/parser/parser_stream').default,
     testUtils = require('../test_utils');
 
 function getFullTestName(test) {

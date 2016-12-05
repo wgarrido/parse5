@@ -1,9 +1,4 @@
-import HTML from '../common/html';
-
-//Aliases
-const $ = HTML.TAG_NAMES;
-
-const NS = HTML.NAMESPACES;
+import { TAG_NAMES as $, NAMESPACES as NS } from '../common/html';
 
 //Element utils
 

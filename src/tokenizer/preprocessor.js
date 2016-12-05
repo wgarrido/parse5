@@ -1,7 +1,4 @@
-import UNICODE from '../common/unicode';
-
-//Aliases
-const $ = UNICODE.CODE_POINTS;
+import { CODE_POINTS as $ } from '../common/unicode';
 
 //Utils
 

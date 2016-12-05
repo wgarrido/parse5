@@ -1,13 +1,7 @@
 import Tokenizer from '../tokenizer';
-import foreignContent from '../common/foreign_content';
-import UNICODE from '../common/unicode';
-import HTML from '../common/html';
-
-//Aliases
-const $ = HTML.TAG_NAMES;
-
-const NS = HTML.NAMESPACES;
-
+import * as foreignContent from '../common/foreign_content';
+import { REPLACEMENT_CHARACTER } from '../common/unicode';
+import { TAG_NAMES as $, NAMESPACES as NS } from '../common/html';
 
 //ParserFeedbackSimulator
 //Simulates adjustment of the Tokenizer which performed by standard parser during tree construction.
@@ -31,7 +25,7 @@ export default class ParserFeedbackSimulator {
 
         else if (token.type === Tokenizer.NULL_CHARACTER_TOKEN && this.inForeignContent) {
             token.type = Tokenizer.CHARACTER_TOKEN;
-            token.chars = UNICODE.REPLACEMENT_CHARACTER;
+            token.chars = REPLACEMENT_CHARACTER;
         }
 
         else if (this.skipNextNewLine) {

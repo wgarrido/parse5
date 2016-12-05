@@ -1,19 +1,13 @@
 import Tokenizer from '../tokenizer';
 import OpenElementStack from './open_element_stack';
 import FormattingElementList from './formatting_element_list';
-import locationInfoMixin from '../location_info/parser_mixin';
-import defaultTreeAdapter from '../tree_adapters/default';
-import doctype from '../common/doctype';
-import foreignContent from '../common/foreign_content';
+import { assign as mixLocationInfo } from '../location_info/parser_mixin';
+import * as defaultTreeAdapter from '../tree_adapters/default';
+import { getDocumentMode } from '../common/doctype';
+import * as foreignContent from '../common/foreign_content';
 import mergeOptions from '../common/merge_options';
-import UNICODE from '../common/unicode';
-import HTML from '../common/html';
-
-//Aliases
-const $ = HTML.TAG_NAMES;
-
-const NS = HTML.NAMESPACES;
-const ATTRS = HTML.ATTRS;
+import { REPLACEMENT_CHARACTER } from '../common/unicode';
+import { TAG_NAMES as $, NAMESPACES as NS, ATTRS, DOCUMENT_MODE, SPECIAL_ELEMENTS } from '../common/html';
 
 const DEFAULT_OPTIONS = {
     locationInfo: false,
@@ -312,7 +306,7 @@ export default class Parser {
         this.pendingScript = null;
 
         if (this.options.locationInfo)
-            locationInfoMixin.assign(this);
+            mixLocationInfo(this);
     }
 
     // API
@@ -837,7 +831,7 @@ export default class Parser {
         const tn = this.treeAdapter.getTagName(element);
         const ns = this.treeAdapter.getNamespaceURI(element);
 
-        return HTML.SPECIAL_ELEMENTS[ns][tn];
+        return SPECIAL_ELEMENTS[ns][tn];
     }
 }
 
@@ -1024,8 +1018,8 @@ function doctypeInInitialMode(p, token) {
     p._setDocumentType(token);
 
     const mode = token.forceQuirks ?
-        HTML.DOCUMENT_MODE.QUIRKS :
-        doctype.getDocumentMode(token.name, token.publicId, token.systemId);
+        DOCUMENT_MODE.QUIRKS :
+        getDocumentMode(token.name, token.publicId, token.systemId);
 
     p.treeAdapter.setDocumentMode(p.document, mode);
 
@@ -1033,7 +1027,7 @@ function doctypeInInitialMode(p, token) {
 }
 
 function tokenInInitialMode(p, token) {
-    p.treeAdapter.setDocumentMode(p.document, HTML.DOCUMENT_MODE.QUIRKS);
+    p.treeAdapter.setDocumentMode(p.document, DOCUMENT_MODE.QUIRKS);
     p.insertionMode = BEFORE_HTML_MODE;
     p._processToken(token);
 }
@@ -1379,7 +1373,7 @@ function appletStartTagInBody(p, token) {
 }
 
 function tableStartTagInBody(p, token) {
-    if (p.treeAdapter.getDocumentMode(p.document) !== HTML.DOCUMENT_MODE.QUIRKS && p.openElements.hasInButtonScope($.P))
+    if (p.treeAdapter.getDocumentMode(p.document) !== DOCUMENT_MODE.QUIRKS && p.openElements.hasInButtonScope($.P))
         p._closePElement();
 
     p._insertElement(token, NS.HTML);
@@ -2764,7 +2758,7 @@ function startTagAfterAfterFrameset(p, token) {
 //12.2.5.5 The rules for parsing tokens in foreign content
 //------------------------------------------------------------------
 function nullCharacterInForeignContent(p, token) {
-    token.chars = UNICODE.REPLACEMENT_CHARACTER;
+    token.chars = REPLACEMENT_CHARACTER;
     p._insertCharacters(token);
 }
 

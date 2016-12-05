@@ -4,7 +4,7 @@ var assert = require('assert'),
     fs = require('fs'),
     path = require('path'),
     WritableStream = require('stream').Writable,
-    SAXParser = require('../../lib').SAXParser,
+    SAXParser = require('../../lib/sax').default,
     testUtils = require('../test_utils');
 
 function getFullTestName(test, idx) {

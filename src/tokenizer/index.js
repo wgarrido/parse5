@@ -1,12 +1,7 @@
 import Preprocessor from './preprocessor';
-import locationInfoMixin from '../location_info/tokenizer_mixin';
-import UNICODE from '../common/unicode';
-import neTree from './named_entity_data';
-
-//Aliases
-const $ = UNICODE.CODE_POINTS;
-
-const $$ = UNICODE.CODE_POINT_SEQUENCES;
+import { assign as mixLocationInfo } from '../location_info/tokenizer_mixin';
+import { CODE_POINTS as $, CODE_POINT_SEQUENCES as $$, REPLACEMENT_CHARACTER } from '../common/unicode';
+import * as neTree from './named_entity_data';
 
 //Replacement code points for numeric entities
 const NUMERIC_ENTITY_REPLACEMENTS = {
@@ -196,7 +191,7 @@ export default class Tokenizer {
         this.currentAttr = null;
 
         if (options && options.locationInfo)
-            locationInfoMixin.assign(this);
+            mixLocationInfo(this);
     }
 
     //API
@@ -673,7 +668,7 @@ _[RCDATA_STATE] = function rcdataState(cp) {
         this.state = RCDATA_LESS_THAN_SIGN_STATE;
 
     else if (cp === $.NULL)
-        this._emitChar(UNICODE.REPLACEMENT_CHARACTER);
+        this._emitChar(REPLACEMENT_CHARACTER);
 
     else if (cp === $.EOF)
         this._emitEOFToken();
@@ -711,7 +706,7 @@ _[RAWTEXT_STATE] = function rawtextState(cp) {
         this.state = RAWTEXT_LESS_THAN_SIGN_STATE;
 
     else if (cp === $.NULL)
-        this._emitChar(UNICODE.REPLACEMENT_CHARACTER);
+        this._emitChar(REPLACEMENT_CHARACTER);
 
     else if (cp === $.EOF)
         this._emitEOFToken();
@@ -730,7 +725,7 @@ _[SCRIPT_DATA_STATE] = function scriptDataState(cp) {
         this.state = SCRIPT_DATA_LESS_THAN_SIGN_STATE;
 
     else if (cp === $.NULL)
-        this._emitChar(UNICODE.REPLACEMENT_CHARACTER);
+        this._emitChar(REPLACEMENT_CHARACTER);
 
     else if (cp === $.EOF)
         this._emitEOFToken();
@@ -746,7 +741,7 @@ _[PLAINTEXT_STATE] = function plaintextState(cp) {
     this.preprocessor.dropParsedChunk();
 
     if (cp === $.NULL)
-        this._emitChar(UNICODE.REPLACEMENT_CHARACTER);
+        this._emitChar(REPLACEMENT_CHARACTER);
 
     else if (cp === $.EOF)
         this._emitEOFToken();
@@ -820,7 +815,7 @@ _[TAG_NAME_STATE] = function tagNameState(cp) {
         this.currentToken.tagName += toAsciiLowerChar(cp);
 
     else if (cp === $.NULL)
-        this.currentToken.tagName += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentToken.tagName += REPLACEMENT_CHARACTER;
 
     else if (cp === $.EOF)
         this._reconsumeInState(DATA_STATE);
@@ -1087,7 +1082,7 @@ _[SCRIPT_DATA_ESCAPED_STATE] = function scriptDataEscapedState(cp) {
         this.state = SCRIPT_DATA_ESCAPED_LESS_THAN_SIGN_STATE;
 
     else if (cp === $.NULL)
-        this._emitChar(UNICODE.REPLACEMENT_CHARACTER);
+        this._emitChar(REPLACEMENT_CHARACTER);
 
     else if (cp === $.EOF)
         this._reconsumeInState(DATA_STATE);
@@ -1110,7 +1105,7 @@ _[SCRIPT_DATA_ESCAPED_DASH_STATE] = function scriptDataEscapedDashState(cp) {
 
     else if (cp === $.NULL) {
         this.state = SCRIPT_DATA_ESCAPED_STATE;
-        this._emitChar(UNICODE.REPLACEMENT_CHARACTER);
+        this._emitChar(REPLACEMENT_CHARACTER);
     }
 
     else if (cp === $.EOF)
@@ -1139,7 +1134,7 @@ _[SCRIPT_DATA_ESCAPED_DASH_DASH_STATE] = function scriptDataEscapedDashDashState
 
     else if (cp === $.NULL) {
         this.state = SCRIPT_DATA_ESCAPED_STATE;
-        this._emitChar(UNICODE.REPLACEMENT_CHARACTER);
+        this._emitChar(REPLACEMENT_CHARACTER);
     }
 
     else if (cp === $.EOF)
@@ -1266,7 +1261,7 @@ _[SCRIPT_DATA_DOUBLE_ESCAPED_STATE] = function scriptDataDoubleEscapedState(cp) 
     }
 
     else if (cp === $.NULL)
-        this._emitChar(UNICODE.REPLACEMENT_CHARACTER);
+        this._emitChar(REPLACEMENT_CHARACTER);
 
     else if (cp === $.EOF)
         this._reconsumeInState(DATA_STATE);
@@ -1291,7 +1286,7 @@ _[SCRIPT_DATA_DOUBLE_ESCAPED_DASH_STATE] = function scriptDataDoubleEscapedDashS
 
     else if (cp === $.NULL) {
         this.state = SCRIPT_DATA_DOUBLE_ESCAPED_STATE;
-        this._emitChar(UNICODE.REPLACEMENT_CHARACTER);
+        this._emitChar(REPLACEMENT_CHARACTER);
     }
 
     else if (cp === $.EOF)
@@ -1322,7 +1317,7 @@ _[SCRIPT_DATA_DOUBLE_ESCAPED_DASH_DASH_STATE] = function scriptDataDoubleEscaped
 
     else if (cp === $.NULL) {
         this.state = SCRIPT_DATA_DOUBLE_ESCAPED_STATE;
-        this._emitChar(UNICODE.REPLACEMENT_CHARACTER);
+        this._emitChar(REPLACEMENT_CHARACTER);
     }
 
     else if (cp === $.EOF)
@@ -1412,7 +1407,7 @@ _[ATTRIBUTE_NAME_STATE] = function attributeNameState(cp) {
         this.currentAttr.name += toChar(cp);
 
     else if (cp === $.NULL)
-        this.currentAttr.name += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentAttr.name += REPLACEMENT_CHARACTER;
 
     else
         this.currentAttr.name += toChar(cp);
@@ -1476,7 +1471,7 @@ _[ATTRIBUTE_VALUE_DOUBLE_QUOTED_STATE] = function attributeValueDoubleQuotedStat
     }
 
     else if (cp === $.NULL)
-        this.currentAttr.value += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentAttr.value += REPLACEMENT_CHARACTER;
 
     else if (cp === $.EOF)
         this._reconsumeInState(DATA_STATE);
@@ -1499,7 +1494,7 @@ _[ATTRIBUTE_VALUE_SINGLE_QUOTED_STATE] = function attributeValueSingleQuotedStat
     }
 
     else if (cp === $.NULL)
-        this.currentAttr.value += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentAttr.value += REPLACEMENT_CHARACTER;
 
     else if (cp === $.EOF)
         this._reconsumeInState(DATA_STATE);
@@ -1527,7 +1522,7 @@ _[ATTRIBUTE_VALUE_UNQUOTED_STATE] = function attributeValueUnquotedState(cp) {
     }
 
     else if (cp === $.NULL)
-        this.currentAttr.value += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentAttr.value += REPLACEMENT_CHARACTER;
 
     else if (cp === $.QUOTATION_MARK || cp === $.APOSTROPHE || cp === $.LESS_THAN_SIGN ||
              cp === $.EQUALS_SIGN || cp === $.GRAVE_ACCENT)
@@ -1621,7 +1616,7 @@ _[BOGUS_COMMENT_STATE_CONTINUATION] = function bogusCommentStateContinuation(cp)
         }
 
         else {
-            this.currentToken.data += cp === $.NULL ? UNICODE.REPLACEMENT_CHARACTER : toChar(cp);
+            this.currentToken.data += cp === $.NULL ? REPLACEMENT_CHARACTER : toChar(cp);
 
             this._hibernationSnapshot();
             cp = this._consume();
@@ -1669,7 +1664,7 @@ _[COMMENT_START_STATE] = function commentStartState(cp) {
         this.state = COMMENT_START_DASH_STATE;
 
     else if (cp === $.NULL) {
-        this.currentToken.data += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentToken.data += REPLACEMENT_CHARACTER;
         this.state = COMMENT_STATE;
     }
 
@@ -1698,7 +1693,7 @@ _[COMMENT_START_DASH_STATE] = function commentStartDashState(cp) {
 
     else if (cp === $.NULL) {
         this.currentToken.data += '-';
-        this.currentToken.data += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentToken.data += REPLACEMENT_CHARACTER;
         this.state = COMMENT_STATE;
     }
 
@@ -1727,7 +1722,7 @@ _[COMMENT_STATE] = function commentState(cp) {
         this.state = COMMENT_END_DASH_STATE;
 
     else if (cp === $.NULL)
-        this.currentToken.data += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentToken.data += REPLACEMENT_CHARACTER;
 
     else if (cp === $.EOF) {
         this._emitCurrentToken();
@@ -1747,7 +1742,7 @@ _[COMMENT_END_DASH_STATE] = function commentEndDashState(cp) {
 
     else if (cp === $.NULL) {
         this.currentToken.data += '-';
-        this.currentToken.data += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentToken.data += REPLACEMENT_CHARACTER;
         this.state = COMMENT_STATE;
     }
 
@@ -1780,7 +1775,7 @@ _[COMMENT_END_STATE] = function commentEndState(cp) {
 
     else if (cp === $.NULL) {
         this.currentToken.data += '--';
-        this.currentToken.data += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentToken.data += REPLACEMENT_CHARACTER;
         this.state = COMMENT_STATE;
     }
 
@@ -1812,7 +1807,7 @@ _[COMMENT_END_BANG_STATE] = function commentEndBangState(cp) {
 
     else if (cp === $.NULL) {
         this.currentToken.data += '--!';
-        this.currentToken.data += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentToken.data += REPLACEMENT_CHARACTER;
         this.state = COMMENT_STATE;
     }
 
@@ -1865,7 +1860,7 @@ _[DOCTYPE_NAME_STATE] = function doctypeNameState(cp) {
         this.currentToken.name += toAsciiLowerChar(cp);
 
     else if (cp === $.NULL)
-        this.currentToken.name += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentToken.name += REPLACEMENT_CHARACTER;
 
     else
         this.currentToken.name += toChar(cp);
@@ -1933,7 +1928,7 @@ _[DOCTYPE_PUBLIC_IDENTIFIER_DOUBLE_QUOTED_STATE] = function doctypePublicIdentif
         this.state = BETWEEN_DOCTYPE_PUBLIC_AND_SYSTEM_IDENTIFIERS_STATE;
 
     else if (cp === $.NULL)
-        this.currentToken.publicId += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentToken.publicId += REPLACEMENT_CHARACTER;
 
     else if (cp === $.GREATER_THAN_SIGN) {
         this.currentToken.forceQuirks = true;
@@ -1959,7 +1954,7 @@ _[DOCTYPE_PUBLIC_IDENTIFIER_SINGLE_QUOTED_STATE] = function doctypePublicIdentif
         this.state = BETWEEN_DOCTYPE_PUBLIC_AND_SYSTEM_IDENTIFIERS_STATE;
 
     else if (cp === $.NULL)
-        this.currentToken.publicId += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentToken.publicId += REPLACEMENT_CHARACTER;
 
     else if (cp === $.GREATER_THAN_SIGN) {
         this.currentToken.forceQuirks = true;
@@ -2043,7 +2038,7 @@ _[DOCTYPE_SYSTEM_IDENTIFIER_DOUBLE_QUOTED_STATE] = function doctypeSystemIdentif
     }
 
     else if (cp === $.NULL)
-        this.currentToken.systemId += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentToken.systemId += REPLACEMENT_CHARACTER;
 
     else if (cp === $.EOF) {
         this.currentToken.forceQuirks = true;
@@ -2069,7 +2064,7 @@ _[DOCTYPE_SYSTEM_IDENTIFIER_SINGLE_QUOTED_STATE] = function doctypeSystemIdentif
     }
 
     else if (cp === $.NULL)
-        this.currentToken.systemId += UNICODE.REPLACEMENT_CHARACTER;
+        this.currentToken.systemId += REPLACEMENT_CHARACTER;
 
     else if (cp === $.EOF) {
         this.currentToken.forceQuirks = true;

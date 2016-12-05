@@ -1,7 +1,7 @@
 'use strict';
 
 var assert = require('assert'),
-    Tokenizer = require('../../lib/tokenizer'),
+    Tokenizer = require('../../lib/tokenizer').default,
     testUtils = require('../test_utils');
 
 exports['Location info (Tokenizer)'] = function () {

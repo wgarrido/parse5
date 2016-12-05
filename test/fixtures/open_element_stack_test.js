@@ -2,7 +2,7 @@
 
 var assert = require('assert'),
     HTML = require('../../lib/common/html'),
-    OpenElementStack = require('../../lib/parser/open_element_stack'),
+    OpenElementStack = require('../../lib/parser/open_element_stack').default,
     testUtils = require('../test_utils');
 
 //Aliases

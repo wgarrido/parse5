@@ -1,8 +1,4 @@
-import UNICODE from '../common/unicode';
-
-//Aliases
-const $ = UNICODE.CODE_POINTS;
-
+import { CODE_POINTS as $ } from '../common/unicode';
 
 export function assign(tokenizer) {
     //NOTE: obtain Tokenizer proto this way to avoid module circular references

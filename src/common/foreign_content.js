@@ -1,12 +1,5 @@
 import Tokenizer from '../tokenizer';
-import HTML from './html';
-
-//Aliases
-const $ = HTML.TAG_NAMES;
-
-const NS = HTML.NAMESPACES;
-const ATTRS = HTML.ATTRS;
-
+import { TAG_NAMES as $, NAMESPACES as NS, ATTRS } from './html';
 
 //MIME types
 const MIME_TYPES = {
