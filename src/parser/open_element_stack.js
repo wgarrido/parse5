@@ -82,313 +82,317 @@ function isScopingElement(tn, ns) {
 }
 
 //Stack of open elements
-const OpenElementStack = module.exports = function (document, treeAdapter) {
-    this.stackTop = -1;
-    this.items = [];
-    this.current = document;
-    this.currentTagName = null;
-    this.currentTmplContent = null;
-    this.tmplCount = 0;
-    this.treeAdapter = treeAdapter;
-};
+class OpenElementStack {
+    constructor(document, treeAdapter) {
+        this.stackTop = -1;
+        this.items = [];
+        this.current = document;
+        this.currentTagName = null;
+        this.currentTmplContent = null;
+        this.tmplCount = 0;
+        this.treeAdapter = treeAdapter;
+    }
 
-//Index of element
-OpenElementStack.prototype._indexOf = function (element) {
-    let idx = -1;
+    //Index of element
+    _indexOf(element) {
+        let idx = -1;
 
-    for (let i = this.stackTop; i >= 0; i--) {
-        if (this.items[i] === element) {
-            idx = i;
-            break;
+        for (let i = this.stackTop; i >= 0; i--) {
+            if (this.items[i] === element) {
+                idx = i;
+                break;
+            }
         }
+        return idx;
     }
-    return idx;
-};
 
-//Update current element
-OpenElementStack.prototype._isInTemplate = function () {
-    return this.currentTagName === $.TEMPLATE && this.treeAdapter.getNamespaceURI(this.current) === NS.HTML;
-};
+    //Update current element
+    _isInTemplate() {
+        return this.currentTagName === $.TEMPLATE && this.treeAdapter.getNamespaceURI(this.current) === NS.HTML;
+    }
 
-OpenElementStack.prototype._updateCurrentElement = function () {
-    this.current = this.items[this.stackTop];
-    this.currentTagName = this.current && this.treeAdapter.getTagName(this.current);
+    _updateCurrentElement() {
+        this.current = this.items[this.stackTop];
+        this.currentTagName = this.current && this.treeAdapter.getTagName(this.current);
 
-    this.currentTmplContent = this._isInTemplate() ? this.treeAdapter.getTemplateContent(this.current) : null;
-};
+        this.currentTmplContent = this._isInTemplate() ? this.treeAdapter.getTemplateContent(this.current) : null;
+    }
 
-//Mutations
-OpenElementStack.prototype.push = function (element) {
-    this.items[++this.stackTop] = element;
-    this._updateCurrentElement();
-
-    if (this._isInTemplate())
-        this.tmplCount++;
-
-};
-
-OpenElementStack.prototype.pop = function () {
-    this.stackTop--;
-
-    if (this.tmplCount > 0 && this._isInTemplate())
-        this.tmplCount--;
-
-    this._updateCurrentElement();
-};
-
-OpenElementStack.prototype.replace = function (oldElement, newElement) {
-    const idx = this._indexOf(oldElement);
-
-    this.items[idx] = newElement;
-
-    if (idx === this.stackTop)
+    //Mutations
+    push(element) {
+        this.items[++this.stackTop] = element;
         this._updateCurrentElement();
-};
 
-OpenElementStack.prototype.insertAfter = function (referenceElement, newElement) {
-    const insertionIdx = this._indexOf(referenceElement) + 1;
+        if (this._isInTemplate())
+            this.tmplCount++;
 
-    this.items.splice(insertionIdx, 0, newElement);
+    }
 
-    if (insertionIdx === ++this.stackTop)
+    pop() {
+        this.stackTop--;
+
+        if (this.tmplCount > 0 && this._isInTemplate())
+            this.tmplCount--;
+
         this._updateCurrentElement();
-};
-
-OpenElementStack.prototype.popUntilTagNamePopped = function (tagName) {
-    while (this.stackTop > -1) {
-        const tn = this.currentTagName;
-        const ns = this.treeAdapter.getNamespaceURI(this.current);
-
-        this.pop();
-
-        if (tn === tagName && ns === NS.HTML)
-            break;
     }
-};
 
-OpenElementStack.prototype.popUntilElementPopped = function (element) {
-    while (this.stackTop > -1) {
-        const poppedElement = this.current;
+    replace(oldElement, newElement) {
+        const idx = this._indexOf(oldElement);
 
-        this.pop();
+        this.items[idx] = newElement;
 
-        if (poppedElement === element)
-            break;
-    }
-};
-
-OpenElementStack.prototype.popUntilNumberedHeaderPopped = function () {
-    while (this.stackTop > -1) {
-        const tn = this.currentTagName;
-        const ns = this.treeAdapter.getNamespaceURI(this.current);
-
-        this.pop();
-
-        if (tn === $.H1 || tn === $.H2 || tn === $.H3 || tn === $.H4 || tn === $.H5 || tn === $.H6 && ns === NS.HTML)
-            break;
-    }
-};
-
-OpenElementStack.prototype.popUntilTableCellPopped = function () {
-    while (this.stackTop > -1) {
-        const tn = this.currentTagName;
-        const ns = this.treeAdapter.getNamespaceURI(this.current);
-
-        this.pop();
-
-        if (tn === $.TD || tn === $.TH && ns === NS.HTML)
-            break;
-    }
-};
-
-OpenElementStack.prototype.popAllUpToHtmlElement = function () {
-    //NOTE: here we assume that root <html> element is always first in the open element stack, so
-    //we perform this fast stack clean up.
-    this.stackTop = 0;
-    this._updateCurrentElement();
-};
-
-OpenElementStack.prototype.clearBackToTableContext = function () {
-    while (this.currentTagName !== $.TABLE &&
-           this.currentTagName !== $.TEMPLATE &&
-           this.currentTagName !== $.HTML ||
-           this.treeAdapter.getNamespaceURI(this.current) !== NS.HTML)
-        this.pop();
-};
-
-OpenElementStack.prototype.clearBackToTableBodyContext = function () {
-    while (this.currentTagName !== $.TBODY &&
-           this.currentTagName !== $.TFOOT &&
-           this.currentTagName !== $.THEAD &&
-           this.currentTagName !== $.TEMPLATE &&
-           this.currentTagName !== $.HTML ||
-           this.treeAdapter.getNamespaceURI(this.current) !== NS.HTML)
-        this.pop();
-};
-
-OpenElementStack.prototype.clearBackToTableRowContext = function () {
-    while (this.currentTagName !== $.TR &&
-           this.currentTagName !== $.TEMPLATE &&
-           this.currentTagName !== $.HTML ||
-           this.treeAdapter.getNamespaceURI(this.current) !== NS.HTML)
-        this.pop();
-};
-
-OpenElementStack.prototype.remove = function (element) {
-    for (let i = this.stackTop; i >= 0; i--) {
-        if (this.items[i] === element) {
-            this.items.splice(i, 1);
-            this.stackTop--;
+        if (idx === this.stackTop)
             this._updateCurrentElement();
-            break;
+    }
+
+    insertAfter(referenceElement, newElement) {
+        const insertionIdx = this._indexOf(referenceElement) + 1;
+
+        this.items.splice(insertionIdx, 0, newElement);
+
+        if (insertionIdx === ++this.stackTop)
+            this._updateCurrentElement();
+    }
+
+    popUntilTagNamePopped(tagName) {
+        while (this.stackTop > -1) {
+            const tn = this.currentTagName;
+            const ns = this.treeAdapter.getNamespaceURI(this.current);
+
+            this.pop();
+
+            if (tn === tagName && ns === NS.HTML)
+                break;
         }
     }
-};
 
-//Search
-OpenElementStack.prototype.tryPeekProperlyNestedBodyElement = function () {
-    //Properly nested <body> element (should be second element in stack).
-    const element = this.items[1];
+    popUntilElementPopped(element) {
+        while (this.stackTop > -1) {
+            const poppedElement = this.current;
 
-    return element && this.treeAdapter.getTagName(element) === $.BODY ? element : null;
-};
+            this.pop();
 
-OpenElementStack.prototype.contains = function (element) {
-    return this._indexOf(element) > -1;
-};
-
-OpenElementStack.prototype.getCommonAncestor = function (element) {
-    let elementIdx = this._indexOf(element);
-
-    return --elementIdx >= 0 ? this.items[elementIdx] : null;
-};
-
-OpenElementStack.prototype.isRootHtmlElementCurrent = function () {
-    return this.stackTop === 0 && this.currentTagName === $.HTML;
-};
-
-//Element in scope
-OpenElementStack.prototype.hasInScope = function (tagName) {
-    for (let i = this.stackTop; i >= 0; i--) {
-        const tn = this.treeAdapter.getTagName(this.items[i]);
-        const ns = this.treeAdapter.getNamespaceURI(this.items[i]);
-
-        if (tn === tagName && ns === NS.HTML)
-            return true;
-
-        if (isScopingElement(tn, ns))
-            return false;
+            if (poppedElement === element)
+                break;
+        }
     }
 
-    return true;
-};
+    popUntilNumberedHeaderPopped() {
+        while (this.stackTop > -1) {
+            const tn = this.currentTagName;
+            const ns = this.treeAdapter.getNamespaceURI(this.current);
 
-OpenElementStack.prototype.hasNumberedHeaderInScope = function () {
-    for (let i = this.stackTop; i >= 0; i--) {
-        const tn = this.treeAdapter.getTagName(this.items[i]);
-        const ns = this.treeAdapter.getNamespaceURI(this.items[i]);
+            this.pop();
 
-        if ((tn === $.H1 || tn === $.H2 || tn === $.H3 || tn === $.H4 || tn === $.H5 || tn === $.H6) && ns === NS.HTML)
-            return true;
-
-        if (isScopingElement(tn, ns))
-            return false;
+            if (tn === $.H1 || tn === $.H2 || tn === $.H3 || tn === $.H4 || tn === $.H5 || tn === $.H6 && ns === NS.HTML)
+                break;
+        }
     }
 
-    return true;
-};
+    popUntilTableCellPopped() {
+        while (this.stackTop > -1) {
+            const tn = this.currentTagName;
+            const ns = this.treeAdapter.getNamespaceURI(this.current);
 
-OpenElementStack.prototype.hasInListItemScope = function (tagName) {
-    for (let i = this.stackTop; i >= 0; i--) {
-        const tn = this.treeAdapter.getTagName(this.items[i]);
-        const ns = this.treeAdapter.getNamespaceURI(this.items[i]);
+            this.pop();
 
-        if (tn === tagName && ns === NS.HTML)
-            return true;
-
-        if ((tn === $.UL || tn === $.OL) && ns === NS.HTML || isScopingElement(tn, ns))
-            return false;
+            if (tn === $.TD || tn === $.TH && ns === NS.HTML)
+                break;
+        }
     }
 
-    return true;
-};
-
-OpenElementStack.prototype.hasInButtonScope = function (tagName) {
-    for (let i = this.stackTop; i >= 0; i--) {
-        const tn = this.treeAdapter.getTagName(this.items[i]);
-        const ns = this.treeAdapter.getNamespaceURI(this.items[i]);
-
-        if (tn === tagName && ns === NS.HTML)
-            return true;
-
-        if (tn === $.BUTTON && ns === NS.HTML || isScopingElement(tn, ns))
-            return false;
+    popAllUpToHtmlElement() {
+        //NOTE: here we assume that root <html> element is always first in the open element stack, so
+        //we perform this fast stack clean up.
+        this.stackTop = 0;
+        this._updateCurrentElement();
     }
 
-    return true;
-};
-
-OpenElementStack.prototype.hasInTableScope = function (tagName) {
-    for (let i = this.stackTop; i >= 0; i--) {
-        const tn = this.treeAdapter.getTagName(this.items[i]);
-        const ns = this.treeAdapter.getNamespaceURI(this.items[i]);
-
-        if (ns !== NS.HTML)
-            continue;
-
-        if (tn === tagName)
-            return true;
-
-        if (tn === $.TABLE || tn === $.TEMPLATE || tn === $.HTML)
-            return false;
+    clearBackToTableContext() {
+        while (this.currentTagName !== $.TABLE &&
+               this.currentTagName !== $.TEMPLATE &&
+               this.currentTagName !== $.HTML ||
+               this.treeAdapter.getNamespaceURI(this.current) !== NS.HTML)
+            this.pop();
     }
 
-    return true;
-};
-
-OpenElementStack.prototype.hasTableBodyContextInTableScope = function () {
-    for (let i = this.stackTop; i >= 0; i--) {
-        const tn = this.treeAdapter.getTagName(this.items[i]);
-        const ns = this.treeAdapter.getNamespaceURI(this.items[i]);
-
-        if (ns !== NS.HTML)
-            continue;
-
-        if (tn === $.TBODY || tn === $.THEAD || tn === $.TFOOT)
-            return true;
-
-        if (tn === $.TABLE || tn === $.HTML)
-            return false;
+    clearBackToTableBodyContext() {
+        while (this.currentTagName !== $.TBODY &&
+               this.currentTagName !== $.TFOOT &&
+               this.currentTagName !== $.THEAD &&
+               this.currentTagName !== $.TEMPLATE &&
+               this.currentTagName !== $.HTML ||
+               this.treeAdapter.getNamespaceURI(this.current) !== NS.HTML)
+            this.pop();
     }
 
-    return true;
-};
-
-OpenElementStack.prototype.hasInSelectScope = function (tagName) {
-    for (let i = this.stackTop; i >= 0; i--) {
-        const tn = this.treeAdapter.getTagName(this.items[i]);
-        const ns = this.treeAdapter.getNamespaceURI(this.items[i]);
-
-        if (ns !== NS.HTML)
-            continue;
-
-        if (tn === tagName)
-            return true;
-
-        if (tn !== $.OPTION && tn !== $.OPTGROUP)
-            return false;
+    clearBackToTableRowContext() {
+        while (this.currentTagName !== $.TR &&
+               this.currentTagName !== $.TEMPLATE &&
+               this.currentTagName !== $.HTML ||
+               this.treeAdapter.getNamespaceURI(this.current) !== NS.HTML)
+            this.pop();
     }
 
-    return true;
-};
+    remove(element) {
+        for (let i = this.stackTop; i >= 0; i--) {
+            if (this.items[i] === element) {
+                this.items.splice(i, 1);
+                this.stackTop--;
+                this._updateCurrentElement();
+                break;
+            }
+        }
+    }
 
-//Implied end tags
-OpenElementStack.prototype.generateImpliedEndTags = function () {
-    while (isImpliedEndTagRequired(this.currentTagName))
-        this.pop();
-};
+    //Search
+    tryPeekProperlyNestedBodyElement() {
+        //Properly nested <body> element (should be second element in stack).
+        const element = this.items[1];
 
-OpenElementStack.prototype.generateImpliedEndTagsWithExclusion = function (exclusionTagName) {
-    while (isImpliedEndTagRequired(this.currentTagName) && this.currentTagName !== exclusionTagName)
-        this.pop();
-};
+        return element && this.treeAdapter.getTagName(element) === $.BODY ? element : null;
+    }
+
+    contains(element) {
+        return this._indexOf(element) > -1;
+    }
+
+    getCommonAncestor(element) {
+        let elementIdx = this._indexOf(element);
+
+        return --elementIdx >= 0 ? this.items[elementIdx] : null;
+    }
+
+    isRootHtmlElementCurrent() {
+        return this.stackTop === 0 && this.currentTagName === $.HTML;
+    }
+
+    //Element in scope
+    hasInScope(tagName) {
+        for (let i = this.stackTop; i >= 0; i--) {
+            const tn = this.treeAdapter.getTagName(this.items[i]);
+            const ns = this.treeAdapter.getNamespaceURI(this.items[i]);
+
+            if (tn === tagName && ns === NS.HTML)
+                return true;
+
+            if (isScopingElement(tn, ns))
+                return false;
+        }
+
+        return true;
+    }
+
+    hasNumberedHeaderInScope() {
+        for (let i = this.stackTop; i >= 0; i--) {
+            const tn = this.treeAdapter.getTagName(this.items[i]);
+            const ns = this.treeAdapter.getNamespaceURI(this.items[i]);
+
+            if ((tn === $.H1 || tn === $.H2 || tn === $.H3 || tn === $.H4 || tn === $.H5 || tn === $.H6) && ns === NS.HTML)
+                return true;
+
+            if (isScopingElement(tn, ns))
+                return false;
+        }
+
+        return true;
+    }
+
+    hasInListItemScope(tagName) {
+        for (let i = this.stackTop; i >= 0; i--) {
+            const tn = this.treeAdapter.getTagName(this.items[i]);
+            const ns = this.treeAdapter.getNamespaceURI(this.items[i]);
+
+            if (tn === tagName && ns === NS.HTML)
+                return true;
+
+            if ((tn === $.UL || tn === $.OL) && ns === NS.HTML || isScopingElement(tn, ns))
+                return false;
+        }
+
+        return true;
+    }
+
+    hasInButtonScope(tagName) {
+        for (let i = this.stackTop; i >= 0; i--) {
+            const tn = this.treeAdapter.getTagName(this.items[i]);
+            const ns = this.treeAdapter.getNamespaceURI(this.items[i]);
+
+            if (tn === tagName && ns === NS.HTML)
+                return true;
+
+            if (tn === $.BUTTON && ns === NS.HTML || isScopingElement(tn, ns))
+                return false;
+        }
+
+        return true;
+    }
+
+    hasInTableScope(tagName) {
+        for (let i = this.stackTop; i >= 0; i--) {
+            const tn = this.treeAdapter.getTagName(this.items[i]);
+            const ns = this.treeAdapter.getNamespaceURI(this.items[i]);
+
+            if (ns !== NS.HTML)
+                continue;
+
+            if (tn === tagName)
+                return true;
+
+            if (tn === $.TABLE || tn === $.TEMPLATE || tn === $.HTML)
+                return false;
+        }
+
+        return true;
+    }
+
+    hasTableBodyContextInTableScope() {
+        for (let i = this.stackTop; i >= 0; i--) {
+            const tn = this.treeAdapter.getTagName(this.items[i]);
+            const ns = this.treeAdapter.getNamespaceURI(this.items[i]);
+
+            if (ns !== NS.HTML)
+                continue;
+
+            if (tn === $.TBODY || tn === $.THEAD || tn === $.TFOOT)
+                return true;
+
+            if (tn === $.TABLE || tn === $.HTML)
+                return false;
+        }
+
+        return true;
+    }
+
+    hasInSelectScope(tagName) {
+        for (let i = this.stackTop; i >= 0; i--) {
+            const tn = this.treeAdapter.getTagName(this.items[i]);
+            const ns = this.treeAdapter.getNamespaceURI(this.items[i]);
+
+            if (ns !== NS.HTML)
+                continue;
+
+            if (tn === tagName)
+                return true;
+
+            if (tn !== $.OPTION && tn !== $.OPTGROUP)
+                return false;
+        }
+
+        return true;
+    }
+
+    //Implied end tags
+    generateImpliedEndTags() {
+        while (isImpliedEndTagRequired(this.currentTagName))
+            this.pop();
+    }
+
+    generateImpliedEndTagsWithExclusion(exclusionTagName) {
+        while (isImpliedEndTagRequired(this.currentTagName) && this.currentTagName !== exclusionTagName)
+            this.pop();
+    }
+}
+
+export default OpenElementStack;

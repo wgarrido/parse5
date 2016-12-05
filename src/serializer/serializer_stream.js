@@ -1,5 +1,5 @@
 import { Readable as ReadableStream } from 'stream';
-import { inherits } from 'util';
+import util from 'util';
 import Serializer from './index';
 
 const SerializerStream = module.exports = function (node, options) {
@@ -17,7 +17,7 @@ const SerializerStream = module.exports = function (node, options) {
     });
 };
 
-inherits(SerializerStream, ReadableStream);
+util.inherits(SerializerStream, ReadableStream);
 
 //Readable stream implementation
 SerializerStream.prototype._read = function () {

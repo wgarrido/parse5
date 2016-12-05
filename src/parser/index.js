@@ -304,540 +304,542 @@ _[AFTER_AFTER_FRAMESET_MODE][Tokenizer.EOF_TOKEN] = stopParsing;
 
 
 //Parser
-const Parser = module.exports = function (options) {
-    this.options = mergeOptions(DEFAULT_OPTIONS, options);
+class Parser {
+    constructor(options) {
+        this.options = mergeOptions(DEFAULT_OPTIONS, options);
 
-    this.treeAdapter = this.options.treeAdapter;
-    this.pendingScript = null;
-
-    if (this.options.locationInfo)
-        locationInfoMixin.assign(this);
-};
-
-// API
-Parser.prototype.parse = function (html) {
-    const document = this.treeAdapter.createDocument();
-
-    this._bootstrap(document, null);
-    this.tokenizer.write(html, true);
-    this._runParsingLoop(null, null);
-
-    return document;
-};
-
-Parser.prototype.parseFragment = function (html, fragmentContext) {
-    //NOTE: use <template> element as a fragment context if context element was not provided,
-    //so we will parse in "forgiving" manner
-    if (!fragmentContext)
-        fragmentContext = this.treeAdapter.createElement($.TEMPLATE, NS.HTML, []);
-
-    //NOTE: create fake element which will be used as 'document' for fragment parsing.
-    //This is important for jsdom there 'document' can't be recreated, therefore
-    //fragment parsing causes messing of the main `document`.
-    const documentMock = this.treeAdapter.createElement('documentmock', NS.HTML, []);
-
-    this._bootstrap(documentMock, fragmentContext);
-
-    if (this.treeAdapter.getTagName(fragmentContext) === $.TEMPLATE)
-        this._pushTmplInsertionMode(IN_TEMPLATE_MODE);
-
-    this._initTokenizerForFragmentParsing();
-    this._insertFakeRootElement();
-    this._resetInsertionMode();
-    this._findFormInFragmentContext();
-    this.tokenizer.write(html, true);
-    this._runParsingLoop(null, null);
-
-    const rootElement = this.treeAdapter.getFirstChild(documentMock);
-    const fragment = this.treeAdapter.createDocumentFragment();
-
-    this._adoptNodes(rootElement, fragment);
-
-    return fragment;
-};
-
-//Bootstrap parser
-Parser.prototype._bootstrap = function (document, fragmentContext) {
-    this.tokenizer = new Tokenizer(this.options);
-
-    this.stopped = false;
-
-    this.insertionMode = INITIAL_MODE;
-    this.originalInsertionMode = '';
-
-    this.document = document;
-    this.fragmentContext = fragmentContext;
-
-    this.headElement = null;
-    this.formElement = null;
-
-    this.openElements = new OpenElementStack(this.document, this.treeAdapter);
-    this.activeFormattingElements = new FormattingElementList(this.treeAdapter);
-
-    this.tmplInsertionModeStack = [];
-    this.tmplInsertionModeStackTop = -1;
-    this.currentTmplInsertionMode = null;
-
-    this.pendingCharacterTokens = [];
-    this.hasNonWhitespacePendingCharacterToken = false;
-
-    this.framesetOk = true;
-    this.skipNextNewLine = false;
-    this.fosterParentingEnabled = false;
-};
-
-//Parsing loop
-Parser.prototype._runParsingLoop = function (writeCallback, scriptHandler) {
-    while (!this.stopped) {
-        this._setupTokenizerCDATAMode();
-
-        const token = this.tokenizer.getNextToken();
-
-        if (token.type === Tokenizer.HIBERNATION_TOKEN)
-            break;
-
-        if (this.skipNextNewLine) {
-            this.skipNextNewLine = false;
-
-            if (token.type === Tokenizer.WHITESPACE_CHARACTER_TOKEN && token.chars[0] === '\n') {
-                if (token.chars.length === 1)
-                    continue;
-
-                token.chars = token.chars.substr(1);
-            }
-        }
-
-        this._processInputToken(token);
-
-        if (scriptHandler && this.pendingScript)
-            break;
-    }
-
-    if (scriptHandler && this.pendingScript) {
-        const script = this.pendingScript;
-
+        this.treeAdapter = this.options.treeAdapter;
         this.pendingScript = null;
 
-        scriptHandler(script);
-
-        return;
+        if (this.options.locationInfo)
+            locationInfoMixin.assign(this);
     }
 
-    if (writeCallback)
-        writeCallback();
-};
+    // API
+    parse(html) {
+        const document = this.treeAdapter.createDocument();
 
-//Text parsing
-Parser.prototype._setupTokenizerCDATAMode = function () {
-    const current = this._getAdjustedCurrentElement();
+        this._bootstrap(document, null);
+        this.tokenizer.write(html, true);
+        this._runParsingLoop(null, null);
 
-    this.tokenizer.allowCDATA = current && current !== this.document &&
-                                this.treeAdapter.getNamespaceURI(current) !== NS.HTML && !this._isIntegrationPoint(current);
-};
+        return document;
+    }
 
-Parser.prototype._switchToTextParsing = function (currentToken, nextTokenizerState) {
-    this._insertElement(currentToken, NS.HTML);
-    this.tokenizer.state = nextTokenizerState;
-    this.originalInsertionMode = this.insertionMode;
-    this.insertionMode = TEXT_MODE;
-};
+    parseFragment(html, fragmentContext) {
+        //NOTE: use <template> element as a fragment context if context element was not provided,
+        //so we will parse in "forgiving" manner
+        if (!fragmentContext)
+            fragmentContext = this.treeAdapter.createElement($.TEMPLATE, NS.HTML, []);
 
-Parser.prototype.switchToPlaintextParsing = function () {
-    this.insertionMode = TEXT_MODE;
-    this.originalInsertionMode = IN_BODY_MODE;
-    this.tokenizer.state = Tokenizer.MODE.PLAINTEXT;
-};
+        //NOTE: create fake element which will be used as 'document' for fragment parsing.
+        //This is important for jsdom there 'document' can't be recreated, therefore
+        //fragment parsing causes messing of the main `document`.
+        const documentMock = this.treeAdapter.createElement('documentmock', NS.HTML, []);
 
-//Fragment parsing
-Parser.prototype._getAdjustedCurrentElement = function () {
-    return this.openElements.stackTop === 0 && this.fragmentContext ?
-        this.fragmentContext :
-        this.openElements.current;
-};
+        this._bootstrap(documentMock, fragmentContext);
 
-Parser.prototype._findFormInFragmentContext = function () {
-    let node = this.fragmentContext;
+        if (this.treeAdapter.getTagName(fragmentContext) === $.TEMPLATE)
+            this._pushTmplInsertionMode(IN_TEMPLATE_MODE);
 
-    do {
-        if (this.treeAdapter.getTagName(node) === $.FORM) {
-            this.formElement = node;
-            break;
+        this._initTokenizerForFragmentParsing();
+        this._insertFakeRootElement();
+        this._resetInsertionMode();
+        this._findFormInFragmentContext();
+        this.tokenizer.write(html, true);
+        this._runParsingLoop(null, null);
+
+        const rootElement = this.treeAdapter.getFirstChild(documentMock);
+        const fragment = this.treeAdapter.createDocumentFragment();
+
+        this._adoptNodes(rootElement, fragment);
+
+        return fragment;
+    }
+
+    //Bootstrap parser
+    _bootstrap(document, fragmentContext) {
+        this.tokenizer = new Tokenizer(this.options);
+
+        this.stopped = false;
+
+        this.insertionMode = INITIAL_MODE;
+        this.originalInsertionMode = '';
+
+        this.document = document;
+        this.fragmentContext = fragmentContext;
+
+        this.headElement = null;
+        this.formElement = null;
+
+        this.openElements = new OpenElementStack(this.document, this.treeAdapter);
+        this.activeFormattingElements = new FormattingElementList(this.treeAdapter);
+
+        this.tmplInsertionModeStack = [];
+        this.tmplInsertionModeStackTop = -1;
+        this.currentTmplInsertionMode = null;
+
+        this.pendingCharacterTokens = [];
+        this.hasNonWhitespacePendingCharacterToken = false;
+
+        this.framesetOk = true;
+        this.skipNextNewLine = false;
+        this.fosterParentingEnabled = false;
+    }
+
+    //Parsing loop
+    _runParsingLoop(writeCallback, scriptHandler) {
+        while (!this.stopped) {
+            this._setupTokenizerCDATAMode();
+
+            const token = this.tokenizer.getNextToken();
+
+            if (token.type === Tokenizer.HIBERNATION_TOKEN)
+                break;
+
+            if (this.skipNextNewLine) {
+                this.skipNextNewLine = false;
+
+                if (token.type === Tokenizer.WHITESPACE_CHARACTER_TOKEN && token.chars[0] === '\n') {
+                    if (token.chars.length === 1)
+                        continue;
+
+                    token.chars = token.chars.substr(1);
+                }
+            }
+
+            this._processInputToken(token);
+
+            if (scriptHandler && this.pendingScript)
+                break;
         }
 
-        node = this.treeAdapter.getParentNode(node);
-    } while (node);
-};
+        if (scriptHandler && this.pendingScript) {
+            const script = this.pendingScript;
 
-Parser.prototype._initTokenizerForFragmentParsing = function () {
-    if (this.treeAdapter.getNamespaceURI(this.fragmentContext) === NS.HTML) {
-        const tn = this.treeAdapter.getTagName(this.fragmentContext);
+            this.pendingScript = null;
 
-        if (tn === $.TITLE || tn === $.TEXTAREA)
-            this.tokenizer.state = Tokenizer.MODE.RCDATA;
+            scriptHandler(script);
 
-        else if (tn === $.STYLE || tn === $.XMP || tn === $.IFRAME ||
-                 tn === $.NOEMBED || tn === $.NOFRAMES || tn === $.NOSCRIPT)
-            this.tokenizer.state = Tokenizer.MODE.RAWTEXT;
+            return;
+        }
 
-        else if (tn === $.SCRIPT)
-            this.tokenizer.state = Tokenizer.MODE.SCRIPT_DATA;
-
-        else if (tn === $.PLAINTEXT)
-            this.tokenizer.state = Tokenizer.MODE.PLAINTEXT;
+        if (writeCallback)
+            writeCallback();
     }
-};
 
-//Tree mutation
-Parser.prototype._setDocumentType = function (token) {
-    this.treeAdapter.setDocumentType(this.document, token.name, token.publicId, token.systemId);
-};
+    //Text parsing
+    _setupTokenizerCDATAMode() {
+        const current = this._getAdjustedCurrentElement();
 
-Parser.prototype._attachElementToTree = function (element) {
-    if (this._shouldFosterParentOnInsertion())
-        this._fosterParentElement(element);
-
-    else {
-        const parent = this.openElements.currentTmplContent || this.openElements.current;
-
-        this.treeAdapter.appendChild(parent, element);
+        this.tokenizer.allowCDATA = current && current !== this.document &&
+                                    this.treeAdapter.getNamespaceURI(current) !== NS.HTML && !this._isIntegrationPoint(current);
     }
-};
 
-Parser.prototype._appendElement = function (token, namespaceURI) {
-    const element = this.treeAdapter.createElement(token.tagName, namespaceURI, token.attrs);
-
-    this._attachElementToTree(element);
-};
-
-Parser.prototype._insertElement = function (token, namespaceURI) {
-    const element = this.treeAdapter.createElement(token.tagName, namespaceURI, token.attrs);
-
-    this._attachElementToTree(element);
-    this.openElements.push(element);
-};
-
-Parser.prototype._insertFakeElement = function (tagName) {
-    const element = this.treeAdapter.createElement(tagName, NS.HTML, []);
-
-    this._attachElementToTree(element);
-    this.openElements.push(element);
-};
-
-Parser.prototype._insertTemplate = function (token) {
-    const tmpl = this.treeAdapter.createElement(token.tagName, NS.HTML, token.attrs);
-    const content = this.treeAdapter.createDocumentFragment();
-
-    this.treeAdapter.setTemplateContent(tmpl, content);
-    this._attachElementToTree(tmpl);
-    this.openElements.push(tmpl);
-};
-
-Parser.prototype._insertFakeRootElement = function () {
-    const element = this.treeAdapter.createElement($.HTML, NS.HTML, []);
-
-    this.treeAdapter.appendChild(this.openElements.current, element);
-    this.openElements.push(element);
-};
-
-Parser.prototype._appendCommentNode = function (token, parent) {
-    const commentNode = this.treeAdapter.createCommentNode(token.data);
-
-    this.treeAdapter.appendChild(parent, commentNode);
-};
-
-Parser.prototype._insertCharacters = function (token) {
-    if (this._shouldFosterParentOnInsertion())
-        this._fosterParentText(token.chars);
-
-    else {
-        const parent = this.openElements.currentTmplContent || this.openElements.current;
-
-        this.treeAdapter.insertText(parent, token.chars);
+    _switchToTextParsing(currentToken, nextTokenizerState) {
+        this._insertElement(currentToken, NS.HTML);
+        this.tokenizer.state = nextTokenizerState;
+        this.originalInsertionMode = this.insertionMode;
+        this.insertionMode = TEXT_MODE;
     }
-};
 
-Parser.prototype._adoptNodes = function (donor, recipient) {
-    while (true) {
-        const child = this.treeAdapter.getFirstChild(donor);
-
-        if (!child)
-            break;
-
-        this.treeAdapter.detachNode(child);
-        this.treeAdapter.appendChild(recipient, child);
+    switchToPlaintextParsing() {
+        this.insertionMode = TEXT_MODE;
+        this.originalInsertionMode = IN_BODY_MODE;
+        this.tokenizer.state = Tokenizer.MODE.PLAINTEXT;
     }
-};
 
-//Token processing
-Parser.prototype._shouldProcessTokenInForeignContent = function (token) {
-    const current = this._getAdjustedCurrentElement();
+    //Fragment parsing
+    _getAdjustedCurrentElement() {
+        return this.openElements.stackTop === 0 && this.fragmentContext ?
+            this.fragmentContext :
+            this.openElements.current;
+    }
 
-    if (!current || current === this.document)
-        return false;
-
-    const ns = this.treeAdapter.getNamespaceURI(current);
-
-    if (ns === NS.HTML)
-        return false;
-
-    if (this.treeAdapter.getTagName(current) === $.ANNOTATION_XML && ns === NS.MATHML &&
-        token.type === Tokenizer.START_TAG_TOKEN && token.tagName === $.SVG)
-        return false;
-
-    const isCharacterToken = token.type === Tokenizer.CHARACTER_TOKEN ||
-                           token.type === Tokenizer.NULL_CHARACTER_TOKEN ||
-                           token.type === Tokenizer.WHITESPACE_CHARACTER_TOKEN;
-
-    const isMathMLTextStartTag = token.type === Tokenizer.START_TAG_TOKEN &&
-                           token.tagName !== $.MGLYPH &&
-                           token.tagName !== $.MALIGNMARK;
-
-    if ((isMathMLTextStartTag || isCharacterToken) && this._isIntegrationPoint(current, NS.MATHML))
-        return false;
-
-    if ((token.type === Tokenizer.START_TAG_TOKEN || isCharacterToken) && this._isIntegrationPoint(current, NS.HTML))
-        return false;
-
-    return token.type !== Tokenizer.EOF_TOKEN;
-};
-
-Parser.prototype._processToken = function (token) {
-    _[this.insertionMode][token.type](this, token);
-};
-
-Parser.prototype._processTokenInBodyMode = function (token) {
-    _[IN_BODY_MODE][token.type](this, token);
-};
-
-Parser.prototype._processTokenInForeignContent = function (token) {
-    if (token.type === Tokenizer.CHARACTER_TOKEN)
-        characterInForeignContent(this, token);
-
-    else if (token.type === Tokenizer.NULL_CHARACTER_TOKEN)
-        nullCharacterInForeignContent(this, token);
-
-    else if (token.type === Tokenizer.WHITESPACE_CHARACTER_TOKEN)
-        insertCharacters(this, token);
-
-    else if (token.type === Tokenizer.COMMENT_TOKEN)
-        appendComment(this, token);
-
-    else if (token.type === Tokenizer.START_TAG_TOKEN)
-        startTagInForeignContent(this, token);
-
-    else if (token.type === Tokenizer.END_TAG_TOKEN)
-        endTagInForeignContent(this, token);
-};
-
-Parser.prototype._processInputToken = function (token) {
-    if (this._shouldProcessTokenInForeignContent(token))
-        this._processTokenInForeignContent(token);
-
-    else
-        this._processToken(token);
-};
-
-//Integration points
-Parser.prototype._isIntegrationPoint = function (element, foreignNS) {
-    const tn = this.treeAdapter.getTagName(element);
-    const ns = this.treeAdapter.getNamespaceURI(element);
-    const attrs = this.treeAdapter.getAttrList(element);
-
-    return foreignContent.isIntegrationPoint(tn, ns, attrs, foreignNS);
-};
-
-//Active formatting elements reconstruction
-Parser.prototype._reconstructActiveFormattingElements = function () {
-    const listLength = this.activeFormattingElements.length;
-
-    if (listLength) {
-        let unopenIdx = listLength;
-        let entry = null;
+    _findFormInFragmentContext() {
+        let node = this.fragmentContext;
 
         do {
-            unopenIdx--;
-            entry = this.activeFormattingElements.entries[unopenIdx];
-
-            if (entry.type === FormattingElementList.MARKER_ENTRY || this.openElements.contains(entry.element)) {
-                unopenIdx++;
+            if (this.treeAdapter.getTagName(node) === $.FORM) {
+                this.formElement = node;
                 break;
             }
-        } while (unopenIdx > 0);
 
-        for (let i = unopenIdx; i < listLength; i++) {
-            entry = this.activeFormattingElements.entries[i];
-            this._insertElement(entry.token, this.treeAdapter.getNamespaceURI(entry.element));
-            entry.element = this.openElements.current;
+            node = this.treeAdapter.getParentNode(node);
+        } while (node);
+    }
+
+    _initTokenizerForFragmentParsing() {
+        if (this.treeAdapter.getNamespaceURI(this.fragmentContext) === NS.HTML) {
+            const tn = this.treeAdapter.getTagName(this.fragmentContext);
+
+            if (tn === $.TITLE || tn === $.TEXTAREA)
+                this.tokenizer.state = Tokenizer.MODE.RCDATA;
+
+            else if (tn === $.STYLE || tn === $.XMP || tn === $.IFRAME ||
+                     tn === $.NOEMBED || tn === $.NOFRAMES || tn === $.NOSCRIPT)
+                this.tokenizer.state = Tokenizer.MODE.RAWTEXT;
+
+            else if (tn === $.SCRIPT)
+                this.tokenizer.state = Tokenizer.MODE.SCRIPT_DATA;
+
+            else if (tn === $.PLAINTEXT)
+                this.tokenizer.state = Tokenizer.MODE.PLAINTEXT;
         }
     }
-};
 
-//Close elements
-Parser.prototype._closeTableCell = function () {
-    this.openElements.generateImpliedEndTags();
-    this.openElements.popUntilTableCellPopped();
-    this.activeFormattingElements.clearToLastMarker();
-    this.insertionMode = IN_ROW_MODE;
-};
+    //Tree mutation
+    _setDocumentType(token) {
+        this.treeAdapter.setDocumentType(this.document, token.name, token.publicId, token.systemId);
+    }
 
-Parser.prototype._closePElement = function () {
-    this.openElements.generateImpliedEndTagsWithExclusion($.P);
-    this.openElements.popUntilTagNamePopped($.P);
-};
+    _attachElementToTree(element) {
+        if (this._shouldFosterParentOnInsertion())
+            this._fosterParentElement(element);
 
-//Insertion modes
-Parser.prototype._resetInsertionMode = function () {
-    for (let i = this.openElements.stackTop, last = false; i >= 0; i--) {
-        let element = this.openElements.items[i];
+        else {
+            const parent = this.openElements.currentTmplContent || this.openElements.current;
 
-        if (i === 0) {
-            last = true;
-
-            if (this.fragmentContext)
-                element = this.fragmentContext;
-        }
-
-        const tn = this.treeAdapter.getTagName(element);
-        const newInsertionMode = INSERTION_MODE_RESET_MAP[tn];
-
-        if (newInsertionMode) {
-            this.insertionMode = newInsertionMode;
-            break;
-        }
-
-        else if (!last && (tn === $.TD || tn === $.TH)) {
-            this.insertionMode = IN_CELL_MODE;
-            break;
-        }
-
-        else if (!last && tn === $.HEAD) {
-            this.insertionMode = IN_HEAD_MODE;
-            break;
-        }
-
-        else if (tn === $.SELECT) {
-            this._resetInsertionModeForSelect(i);
-            break;
-        }
-
-        else if (tn === $.TEMPLATE) {
-            this.insertionMode = this.currentTmplInsertionMode;
-            break;
-        }
-
-        else if (tn === $.HTML) {
-            this.insertionMode = this.headElement ? AFTER_HEAD_MODE : BEFORE_HEAD_MODE;
-            break;
-        }
-
-        else if (last) {
-            this.insertionMode = IN_BODY_MODE;
-            break;
+            this.treeAdapter.appendChild(parent, element);
         }
     }
-};
 
-Parser.prototype._resetInsertionModeForSelect = function (selectIdx) {
-    if (selectIdx > 0) {
-        for (let i = selectIdx - 1; i > 0; i--) {
-            const ancestor = this.openElements.items[i];
-            const tn = this.treeAdapter.getTagName(ancestor);
+    _appendElement(token, namespaceURI) {
+        const element = this.treeAdapter.createElement(token.tagName, namespaceURI, token.attrs);
 
-            if (tn === $.TEMPLATE)
+        this._attachElementToTree(element);
+    }
+
+    _insertElement(token, namespaceURI) {
+        const element = this.treeAdapter.createElement(token.tagName, namespaceURI, token.attrs);
+
+        this._attachElementToTree(element);
+        this.openElements.push(element);
+    }
+
+    _insertFakeElement(tagName) {
+        const element = this.treeAdapter.createElement(tagName, NS.HTML, []);
+
+        this._attachElementToTree(element);
+        this.openElements.push(element);
+    }
+
+    _insertTemplate(token) {
+        const tmpl = this.treeAdapter.createElement(token.tagName, NS.HTML, token.attrs);
+        const content = this.treeAdapter.createDocumentFragment();
+
+        this.treeAdapter.setTemplateContent(tmpl, content);
+        this._attachElementToTree(tmpl);
+        this.openElements.push(tmpl);
+    }
+
+    _insertFakeRootElement() {
+        const element = this.treeAdapter.createElement($.HTML, NS.HTML, []);
+
+        this.treeAdapter.appendChild(this.openElements.current, element);
+        this.openElements.push(element);
+    }
+
+    _appendCommentNode(token, parent) {
+        const commentNode = this.treeAdapter.createCommentNode(token.data);
+
+        this.treeAdapter.appendChild(parent, commentNode);
+    }
+
+    _insertCharacters(token) {
+        if (this._shouldFosterParentOnInsertion())
+            this._fosterParentText(token.chars);
+
+        else {
+            const parent = this.openElements.currentTmplContent || this.openElements.current;
+
+            this.treeAdapter.insertText(parent, token.chars);
+        }
+    }
+
+    _adoptNodes(donor, recipient) {
+        while (true) {
+            const child = this.treeAdapter.getFirstChild(donor);
+
+            if (!child)
                 break;
+
+            this.treeAdapter.detachNode(child);
+            this.treeAdapter.appendChild(recipient, child);
+        }
+    }
+
+    //Token processing
+    _shouldProcessTokenInForeignContent(token) {
+        const current = this._getAdjustedCurrentElement();
+
+        if (!current || current === this.document)
+            return false;
+
+        const ns = this.treeAdapter.getNamespaceURI(current);
+
+        if (ns === NS.HTML)
+            return false;
+
+        if (this.treeAdapter.getTagName(current) === $.ANNOTATION_XML && ns === NS.MATHML &&
+            token.type === Tokenizer.START_TAG_TOKEN && token.tagName === $.SVG)
+            return false;
+
+        const isCharacterToken = token.type === Tokenizer.CHARACTER_TOKEN ||
+                               token.type === Tokenizer.NULL_CHARACTER_TOKEN ||
+                               token.type === Tokenizer.WHITESPACE_CHARACTER_TOKEN;
+
+        const isMathMLTextStartTag = token.type === Tokenizer.START_TAG_TOKEN &&
+                               token.tagName !== $.MGLYPH &&
+                               token.tagName !== $.MALIGNMARK;
+
+        if ((isMathMLTextStartTag || isCharacterToken) && this._isIntegrationPoint(current, NS.MATHML))
+            return false;
+
+        if ((token.type === Tokenizer.START_TAG_TOKEN || isCharacterToken) && this._isIntegrationPoint(current, NS.HTML))
+            return false;
+
+        return token.type !== Tokenizer.EOF_TOKEN;
+    }
+
+    _processToken(token) {
+        _[this.insertionMode][token.type](this, token);
+    }
+
+    _processTokenInBodyMode(token) {
+        _[IN_BODY_MODE][token.type](this, token);
+    }
+
+    _processTokenInForeignContent(token) {
+        if (token.type === Tokenizer.CHARACTER_TOKEN)
+            characterInForeignContent(this, token);
+
+        else if (token.type === Tokenizer.NULL_CHARACTER_TOKEN)
+            nullCharacterInForeignContent(this, token);
+
+        else if (token.type === Tokenizer.WHITESPACE_CHARACTER_TOKEN)
+            insertCharacters(this, token);
+
+        else if (token.type === Tokenizer.COMMENT_TOKEN)
+            appendComment(this, token);
+
+        else if (token.type === Tokenizer.START_TAG_TOKEN)
+            startTagInForeignContent(this, token);
+
+        else if (token.type === Tokenizer.END_TAG_TOKEN)
+            endTagInForeignContent(this, token);
+    }
+
+    _processInputToken(token) {
+        if (this._shouldProcessTokenInForeignContent(token))
+            this._processTokenInForeignContent(token);
+
+        else
+            this._processToken(token);
+    }
+
+    //Integration points
+    _isIntegrationPoint(element, foreignNS) {
+        const tn = this.treeAdapter.getTagName(element);
+        const ns = this.treeAdapter.getNamespaceURI(element);
+        const attrs = this.treeAdapter.getAttrList(element);
+
+        return foreignContent.isIntegrationPoint(tn, ns, attrs, foreignNS);
+    }
+
+    //Active formatting elements reconstruction
+    _reconstructActiveFormattingElements() {
+        const listLength = this.activeFormattingElements.length;
+
+        if (listLength) {
+            let unopenIdx = listLength;
+            let entry = null;
+
+            do {
+                unopenIdx--;
+                entry = this.activeFormattingElements.entries[unopenIdx];
+
+                if (entry.type === FormattingElementList.MARKER_ENTRY || this.openElements.contains(entry.element)) {
+                    unopenIdx++;
+                    break;
+                }
+            } while (unopenIdx > 0);
+
+            for (let i = unopenIdx; i < listLength; i++) {
+                entry = this.activeFormattingElements.entries[i];
+                this._insertElement(entry.token, this.treeAdapter.getNamespaceURI(entry.element));
+                entry.element = this.openElements.current;
+            }
+        }
+    }
+
+    //Close elements
+    _closeTableCell() {
+        this.openElements.generateImpliedEndTags();
+        this.openElements.popUntilTableCellPopped();
+        this.activeFormattingElements.clearToLastMarker();
+        this.insertionMode = IN_ROW_MODE;
+    }
+
+    _closePElement() {
+        this.openElements.generateImpliedEndTagsWithExclusion($.P);
+        this.openElements.popUntilTagNamePopped($.P);
+    }
+
+    //Insertion modes
+    _resetInsertionMode() {
+        for (let i = this.openElements.stackTop, last = false; i >= 0; i--) {
+            let element = this.openElements.items[i];
+
+            if (i === 0) {
+                last = true;
+
+                if (this.fragmentContext)
+                    element = this.fragmentContext;
+            }
+
+            const tn = this.treeAdapter.getTagName(element);
+            const newInsertionMode = INSERTION_MODE_RESET_MAP[tn];
+
+            if (newInsertionMode) {
+                this.insertionMode = newInsertionMode;
+                break;
+            }
+
+            else if (!last && (tn === $.TD || tn === $.TH)) {
+                this.insertionMode = IN_CELL_MODE;
+                break;
+            }
+
+            else if (!last && tn === $.HEAD) {
+                this.insertionMode = IN_HEAD_MODE;
+                break;
+            }
+
+            else if (tn === $.SELECT) {
+                this._resetInsertionModeForSelect(i);
+                break;
+            }
+
+            else if (tn === $.TEMPLATE) {
+                this.insertionMode = this.currentTmplInsertionMode;
+                break;
+            }
+
+            else if (tn === $.HTML) {
+                this.insertionMode = this.headElement ? AFTER_HEAD_MODE : BEFORE_HEAD_MODE;
+                break;
+            }
+
+            else if (last) {
+                this.insertionMode = IN_BODY_MODE;
+                break;
+            }
+        }
+    }
+
+    _resetInsertionModeForSelect(selectIdx) {
+        if (selectIdx > 0) {
+            for (let i = selectIdx - 1; i > 0; i--) {
+                const ancestor = this.openElements.items[i];
+                const tn = this.treeAdapter.getTagName(ancestor);
+
+                if (tn === $.TEMPLATE)
+                    break;
+
+                else if (tn === $.TABLE) {
+                    this.insertionMode = IN_SELECT_IN_TABLE_MODE;
+                    return;
+                }
+            }
+        }
+
+        this.insertionMode = IN_SELECT_MODE;
+    }
+
+    _pushTmplInsertionMode(mode) {
+        this.tmplInsertionModeStack.push(mode);
+        this.tmplInsertionModeStackTop++;
+        this.currentTmplInsertionMode = mode;
+    }
+
+    _popTmplInsertionMode() {
+        this.tmplInsertionModeStack.pop();
+        this.tmplInsertionModeStackTop--;
+        this.currentTmplInsertionMode = this.tmplInsertionModeStack[this.tmplInsertionModeStackTop];
+    }
+
+    //Foster parenting
+    _isElementCausesFosterParenting(element) {
+        const tn = this.treeAdapter.getTagName(element);
+
+        return tn === $.TABLE || tn === $.TBODY || tn === $.TFOOT || tn === $.THEAD || tn === $.TR;
+    }
+
+    _shouldFosterParentOnInsertion() {
+        return this.fosterParentingEnabled && this._isElementCausesFosterParenting(this.openElements.current);
+    }
+
+    _findFosterParentingLocation() {
+        const location = {
+            parent: null,
+            beforeElement: null
+        };
+
+        for (let i = this.openElements.stackTop; i >= 0; i--) {
+            const openElement = this.openElements.items[i];
+            const tn = this.treeAdapter.getTagName(openElement);
+            const ns = this.treeAdapter.getNamespaceURI(openElement);
+
+            if (tn === $.TEMPLATE && ns === NS.HTML) {
+                location.parent = this.treeAdapter.getTemplateContent(openElement);
+                break;
+            }
 
             else if (tn === $.TABLE) {
-                this.insertionMode = IN_SELECT_IN_TABLE_MODE;
-                return;
+                location.parent = this.treeAdapter.getParentNode(openElement);
+
+                if (location.parent)
+                    location.beforeElement = openElement;
+                else
+                    location.parent = this.openElements.items[i - 1];
+
+                break;
             }
         }
+
+        if (!location.parent)
+            location.parent = this.openElements.items[0];
+
+        return location;
     }
 
-    this.insertionMode = IN_SELECT_MODE;
-};
+    _fosterParentElement(element) {
+        const location = this._findFosterParentingLocation();
 
-Parser.prototype._pushTmplInsertionMode = function (mode) {
-    this.tmplInsertionModeStack.push(mode);
-    this.tmplInsertionModeStackTop++;
-    this.currentTmplInsertionMode = mode;
-};
-
-Parser.prototype._popTmplInsertionMode = function () {
-    this.tmplInsertionModeStack.pop();
-    this.tmplInsertionModeStackTop--;
-    this.currentTmplInsertionMode = this.tmplInsertionModeStack[this.tmplInsertionModeStackTop];
-};
-
-//Foster parenting
-Parser.prototype._isElementCausesFosterParenting = function (element) {
-    const tn = this.treeAdapter.getTagName(element);
-
-    return tn === $.TABLE || tn === $.TBODY || tn === $.TFOOT || tn === $.THEAD || tn === $.TR;
-};
-
-Parser.prototype._shouldFosterParentOnInsertion = function () {
-    return this.fosterParentingEnabled && this._isElementCausesFosterParenting(this.openElements.current);
-};
-
-Parser.prototype._findFosterParentingLocation = function () {
-    const location = {
-        parent: null,
-        beforeElement: null
-    };
-
-    for (let i = this.openElements.stackTop; i >= 0; i--) {
-        const openElement = this.openElements.items[i];
-        const tn = this.treeAdapter.getTagName(openElement);
-        const ns = this.treeAdapter.getNamespaceURI(openElement);
-
-        if (tn === $.TEMPLATE && ns === NS.HTML) {
-            location.parent = this.treeAdapter.getTemplateContent(openElement);
-            break;
-        }
-
-        else if (tn === $.TABLE) {
-            location.parent = this.treeAdapter.getParentNode(openElement);
-
-            if (location.parent)
-                location.beforeElement = openElement;
-            else
-                location.parent = this.openElements.items[i - 1];
-
-            break;
-        }
+        if (location.beforeElement)
+            this.treeAdapter.insertBefore(location.parent, element, location.beforeElement);
+        else
+            this.treeAdapter.appendChild(location.parent, element);
     }
 
-    if (!location.parent)
-        location.parent = this.openElements.items[0];
+    _fosterParentText(chars) {
+        const location = this._findFosterParentingLocation();
 
-    return location;
-};
+        if (location.beforeElement)
+            this.treeAdapter.insertTextBefore(location.parent, chars, location.beforeElement);
+        else
+            this.treeAdapter.insertText(location.parent, chars);
+    }
 
-Parser.prototype._fosterParentElement = function (element) {
-    const location = this._findFosterParentingLocation();
+    //Special elements
+    _isSpecialElement(element) {
+        const tn = this.treeAdapter.getTagName(element);
+        const ns = this.treeAdapter.getNamespaceURI(element);
 
-    if (location.beforeElement)
-        this.treeAdapter.insertBefore(location.parent, element, location.beforeElement);
-    else
-        this.treeAdapter.appendChild(location.parent, element);
-};
-
-Parser.prototype._fosterParentText = function (chars) {
-    const location = this._findFosterParentingLocation();
-
-    if (location.beforeElement)
-        this.treeAdapter.insertTextBefore(location.parent, chars, location.beforeElement);
-    else
-        this.treeAdapter.insertText(location.parent, chars);
-};
-
-//Special elements
-Parser.prototype._isSpecialElement = function (element) {
-    const tn = this.treeAdapter.getTagName(element);
-    const ns = this.treeAdapter.getNamespaceURI(element);
-
-    return HTML.SPECIAL_ELEMENTS[ns][tn];
-};
+        return HTML.SPECIAL_ELEMENTS[ns][tn];
+    }
+}
 
 //Adoption agency algorithm
 //(see: http://www.whatwg.org/specs/web-apps/current-work/multipage/tree-construction.html#adoptionAgency)
@@ -2815,3 +2817,5 @@ function endTagInForeignContent(p, token) {
         }
     }
 }
+
+export default Parser;

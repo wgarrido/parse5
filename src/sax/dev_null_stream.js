@@ -1,12 +1,14 @@
 import { Writable as WritableStream } from 'stream';
 import util from 'util';
 
-const DevNullStream = module.exports = function () {
-    WritableStream.call(this);
-};
+class DevNullStream extends WritableStream {
+    constructor() {
+        super();
+    }
 
-util.inherits(DevNullStream, WritableStream);
+    _write(chunk, encoding, cb) {
+        cb();
+    }
+}
 
-DevNullStream.prototype._write = (chunk, encoding, cb) => {
-    cb();
-};
+export default DevNullStream;

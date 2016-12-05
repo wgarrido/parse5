@@ -173,30 +173,419 @@ function findNamedEntityTreeBranch(nodeIx, cp) {
 
 
 //Tokenizer
-const Tokenizer = module.exports = function (options) {
-    this.preprocessor = new Preprocessor();
+class Tokenizer {
+    constructor(options) {
+        this.preprocessor = new Preprocessor();
 
-    this.tokenQueue = [];
+        this.tokenQueue = [];
 
-    this.allowCDATA = false;
+        this.allowCDATA = false;
 
-    this.state = DATA_STATE;
-    this.returnState = '';
+        this.state = DATA_STATE;
+        this.returnState = '';
 
-    this.tempBuff = [];
-    this.additionalAllowedCp = void 0;
-    this.lastStartTagName = '';
+        this.tempBuff = [];
+        this.additionalAllowedCp = void 0;
+        this.lastStartTagName = '';
 
-    this.consumedAfterSnapshot = -1;
-    this.active = false;
+        this.consumedAfterSnapshot = -1;
+        this.active = false;
 
-    this.currentCharacterToken = null;
-    this.currentToken = null;
-    this.currentAttr = null;
+        this.currentCharacterToken = null;
+        this.currentToken = null;
+        this.currentAttr = null;
 
-    if (options && options.locationInfo)
-        locationInfoMixin.assign(this);
-};
+        if (options && options.locationInfo)
+            locationInfoMixin.assign(this);
+    }
+
+    //API
+    getNextToken() {
+        while (!this.tokenQueue.length && this.active) {
+            this._hibernationSnapshot();
+
+            const cp = this._consume();
+
+            if (!this._ensureHibernation())
+                this[this.state](cp);
+        }
+
+        return this.tokenQueue.shift();
+    }
+
+    write(chunk, isLastChunk) {
+        this.active = true;
+        this.preprocessor.write(chunk, isLastChunk);
+    }
+
+    insertHtmlAtCurrentPos(chunk) {
+        this.active = true;
+        this.preprocessor.insertHtmlAtCurrentPos(chunk);
+    }
+
+    //Hibernation
+    _hibernationSnapshot() {
+        this.consumedAfterSnapshot = 0;
+    }
+
+    _ensureHibernation() {
+        if (this.preprocessor.endOfChunkHit) {
+            for (; this.consumedAfterSnapshot > 0; this.consumedAfterSnapshot--)
+                this.preprocessor.retreat();
+
+            this.active = false;
+            this.tokenQueue.push({type: Tokenizer.HIBERNATION_TOKEN});
+
+            return true;
+        }
+
+        return false;
+    }
+
+    //Consumption
+    _consume() {
+        this.consumedAfterSnapshot++;
+        return this.preprocessor.advance();
+    }
+
+    _unconsume() {
+        this.consumedAfterSnapshot--;
+        this.preprocessor.retreat();
+    }
+
+    _unconsumeSeveral(count) {
+        while (count--)
+            this._unconsume();
+    }
+
+    _reconsumeInState(state) {
+        this.state = state;
+        this._unconsume();
+    }
+
+    _consumeSubsequentIfMatch(pattern, startCp, caseSensitive) {
+        let consumedCount = 0;
+        let isMatch = true;
+        const patternLength = pattern.length;
+        let patternPos = 0;
+        let cp = startCp;
+        let patternCp = void 0;
+
+        for (; patternPos < patternLength; patternPos++) {
+            if (patternPos > 0) {
+                cp = this._consume();
+                consumedCount++;
+            }
+
+            if (cp === $.EOF) {
+                isMatch = false;
+                break;
+            }
+
+            patternCp = pattern[patternPos];
+
+            if (cp !== patternCp && (caseSensitive || cp !== toAsciiLowerCodePoint(patternCp))) {
+                isMatch = false;
+                break;
+            }
+        }
+
+        if (!isMatch)
+            this._unconsumeSeveral(consumedCount);
+
+        return isMatch;
+    }
+
+    //Lookahead
+    _lookahead() {
+        const cp = this._consume();
+
+        this._unconsume();
+
+        return cp;
+    }
+
+    //Temp buffer
+    isTempBufferEqualToScriptString() {
+        if (this.tempBuff.length !== $$.SCRIPT_STRING.length)
+            return false;
+
+        for (let i = 0; i < this.tempBuff.length; i++) {
+            if (this.tempBuff[i] !== $$.SCRIPT_STRING[i])
+                return false;
+        }
+
+        return true;
+    }
+
+    //Token creation
+    _createStartTagToken() {
+        this.currentToken = {
+            type: Tokenizer.START_TAG_TOKEN,
+            tagName: '',
+            selfClosing: false,
+            attrs: []
+        };
+    }
+
+    _createEndTagToken() {
+        this.currentToken = {
+            type: Tokenizer.END_TAG_TOKEN,
+            tagName: '',
+            attrs: []
+        };
+    }
+
+    _createCommentToken() {
+        this.currentToken = {
+            type: Tokenizer.COMMENT_TOKEN,
+            data: ''
+        };
+    }
+
+    _createDoctypeToken(initialName) {
+        this.currentToken = {
+            type: Tokenizer.DOCTYPE_TOKEN,
+            name: initialName,
+            forceQuirks: false,
+            publicId: null,
+            systemId: null
+        };
+    }
+
+    _createCharacterToken(type, ch) {
+        this.currentCharacterToken = {
+            type,
+            chars: ch
+        };
+    }
+
+    //Tag attributes
+    _createAttr(attrNameFirstCh) {
+        this.currentAttr = {
+            name: attrNameFirstCh,
+            value: ''
+        };
+    }
+
+    _isDuplicateAttr() {
+        return Tokenizer.getTokenAttr(this.currentToken, this.currentAttr.name) !== null;
+    }
+
+    _leaveAttrName(toState) {
+        this.state = toState;
+
+        if (!this._isDuplicateAttr())
+            this.currentToken.attrs.push(this.currentAttr);
+    }
+
+    _leaveAttrValue(toState) {
+        this.state = toState;
+    }
+
+    //Appropriate end tag token
+    //(see: http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#appropriate-end-tag-token)
+    _isAppropriateEndTagToken() {
+        return this.lastStartTagName === this.currentToken.tagName;
+    }
+
+    //Token emission
+    _emitCurrentToken() {
+        this._emitCurrentCharacterToken();
+
+        //NOTE: store emited start tag's tagName to determine is the following end tag token is appropriate.
+        if (this.currentToken.type === Tokenizer.START_TAG_TOKEN)
+            this.lastStartTagName = this.currentToken.tagName;
+
+        this.tokenQueue.push(this.currentToken);
+        this.currentToken = null;
+    }
+
+    _emitCurrentCharacterToken() {
+        if (this.currentCharacterToken) {
+            this.tokenQueue.push(this.currentCharacterToken);
+            this.currentCharacterToken = null;
+        }
+    }
+
+    _emitEOFToken() {
+        this._emitCurrentCharacterToken();
+        this.tokenQueue.push({type: Tokenizer.EOF_TOKEN});
+    }
+
+    //Characters emission
+
+    //OPTIMIZATION: specification uses only one type of character tokens (one token per character).
+    //This causes a huge memory overhead and a lot of unnecessary parser loops. parse5 uses 3 groups of characters.
+    //If we have a sequence of characters that belong to the same group, parser can process it
+    //as a single solid character token.
+    //So, there are 3 types of character tokens in parse5:
+    //1)NULL_CHARACTER_TOKEN - \u0000-character sequences (e.g. '\u0000\u0000\u0000')
+    //2)WHITESPACE_CHARACTER_TOKEN - any whitespace/new-line character sequences (e.g. '\n  \r\t   \f')
+    //3)CHARACTER_TOKEN - any character sequence which don't belong to groups 1 and 2 (e.g. 'abcdef1234@@#$%^')
+    _appendCharToCurrentCharacterToken(type, ch) {
+        if (this.currentCharacterToken && this.currentCharacterToken.type !== type)
+            this._emitCurrentCharacterToken();
+
+        if (this.currentCharacterToken)
+            this.currentCharacterToken.chars += ch;
+
+        else
+            this._createCharacterToken(type, ch);
+    }
+
+    _emitCodePoint(cp) {
+        let type = Tokenizer.CHARACTER_TOKEN;
+
+        if (isWhitespace(cp))
+            type = Tokenizer.WHITESPACE_CHARACTER_TOKEN;
+
+        else if (cp === $.NULL)
+            type = Tokenizer.NULL_CHARACTER_TOKEN;
+
+        this._appendCharToCurrentCharacterToken(type, toChar(cp));
+    }
+
+    _emitSeveralCodePoints(codePoints) {
+        for (let i = 0; i < codePoints.length; i++)
+            this._emitCodePoint(codePoints[i]);
+    }
+
+    //NOTE: used then we emit character explicitly. This is always a non-whitespace and a non-null character.
+    //So we can avoid additional checks here.
+    _emitChar(ch) {
+        this._appendCharToCurrentCharacterToken(Tokenizer.CHARACTER_TOKEN, ch);
+    }
+
+    //Character reference tokenization
+    _consumeNumericEntity(isHex) {
+        let digits = '';
+        let nextCp = void 0;
+
+        do {
+            digits += toChar(this._consume());
+            nextCp = this._lookahead();
+        } while (nextCp !== $.EOF && isDigit(nextCp, isHex));
+
+        if (this._lookahead() === $.SEMICOLON)
+            this._consume();
+
+        const referencedCp = parseInt(digits, isHex ? 16 : 10);
+        const replacement = NUMERIC_ENTITY_REPLACEMENTS[referencedCp];
+
+        if (replacement)
+            return replacement;
+
+        if (isReservedCodePoint(referencedCp))
+            return $.REPLACEMENT_CHARACTER;
+
+        return referencedCp;
+    }
+
+    // NOTE: for the details on this algorithm see
+    // https://github.com/inikulin/parse5/tree/master/scripts/generate_named_entity_data/README.md
+    _consumeNamedEntity(inAttr) {
+        let referencedCodePoints = null;
+        let referenceSize = 0;
+        let cp = null;
+        let consumedCount = 0;
+        let semicolonTerminated = false;
+
+        for (let i = 0; i > -1;) {
+            const current = neTree[i];
+            const inNode = current < MAX_BRANCH_MARKER_VALUE;
+            const nodeWithData = inNode && current & HAS_DATA_FLAG;
+
+            if (nodeWithData) {
+                referencedCodePoints = current & DATA_DUPLET_FLAG ? [neTree[++i], neTree[++i]] : [neTree[++i]];
+                referenceSize = consumedCount;
+
+                if (cp === $.SEMICOLON) {
+                    semicolonTerminated = true;
+                    break;
+                }
+            }
+
+            cp = this._consume();
+            consumedCount++;
+
+            if (cp === $.EOF)
+                break;
+
+            if (inNode)
+                i = current & HAS_BRANCHES_FLAG ? findNamedEntityTreeBranch(i, cp) : -1;
+
+            else
+                i = cp === current ? ++i : -1;
+        }
+
+
+        if (referencedCodePoints) {
+            if (!semicolonTerminated) {
+                //NOTE: unconsume excess (e.g. 'it' in '&notit')
+                this._unconsumeSeveral(consumedCount - referenceSize);
+
+                //NOTE: If the character reference is being consumed as part of an attribute and the next character
+                //is either a U+003D EQUALS SIGN character (=) or an alphanumeric ASCII character, then, for historical
+                //reasons, all the characters that were matched after the U+0026 AMPERSAND character (&) must be
+                //unconsumed, and nothing is returned.
+                //However, if this next character is in fact a U+003D EQUALS SIGN character (=), then this is a
+                //parse error, because some legacy user agents will misinterpret the markup in those cases.
+                //(see: http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#tokenizing-character-references)
+                if (inAttr) {
+                    const nextCp = this._lookahead();
+
+                    if (nextCp === $.EQUALS_SIGN || isAsciiAlphaNumeric(nextCp)) {
+                        this._unconsumeSeveral(referenceSize);
+                        return null;
+                    }
+                }
+            }
+
+            return referencedCodePoints;
+        }
+
+        this._unconsumeSeveral(consumedCount);
+
+        return null;
+    }
+
+    _consumeCharacterReference(startCp, inAttr) {
+        if (isWhitespace(startCp) || startCp === $.GREATER_THAN_SIGN ||
+            startCp === $.AMPERSAND || startCp === this.additionalAllowedCp || startCp === $.EOF) {
+            //NOTE: not a character reference. No characters are consumed, and nothing is returned.
+            this._unconsume();
+            return null;
+        }
+
+        if (startCp === $.NUMBER_SIGN) {
+            //NOTE: we have a numeric entity candidate, now we should determine if it's hex or decimal
+            let isHex = false;
+
+            let nextCp = this._lookahead();
+
+            if (nextCp === $.LATIN_SMALL_X || nextCp === $.LATIN_CAPITAL_X) {
+                this._consume();
+                isHex = true;
+            }
+
+            nextCp = this._lookahead();
+
+            //NOTE: if we have at least one digit this is a numeric entity for sure, so we consume it
+            if (nextCp !== $.EOF && isDigit(nextCp, isHex))
+                return [this._consumeNumericEntity(isHex)];
+
+            //NOTE: otherwise this is a bogus number entity and a parse error. Unconsume the number sign
+            //and the 'x'-character if appropriate.
+            this._unconsumeSeveral(isHex ? 2 : 1);
+            return null;
+        }
+
+        this._unconsume();
+
+        return this._consumeNamedEntity(inAttr);
+    }
+}
 
 //Token types
 Tokenizer.CHARACTER_TOKEN = 'CHARACTER_TOKEN';
@@ -226,394 +615,6 @@ Tokenizer.getTokenAttr = (token, attrName) => {
     }
 
     return null;
-};
-
-//API
-Tokenizer.prototype.getNextToken = function () {
-    while (!this.tokenQueue.length && this.active) {
-        this._hibernationSnapshot();
-
-        const cp = this._consume();
-
-        if (!this._ensureHibernation())
-            this[this.state](cp);
-    }
-
-    return this.tokenQueue.shift();
-};
-
-Tokenizer.prototype.write = function (chunk, isLastChunk) {
-    this.active = true;
-    this.preprocessor.write(chunk, isLastChunk);
-};
-
-Tokenizer.prototype.insertHtmlAtCurrentPos = function (chunk) {
-    this.active = true;
-    this.preprocessor.insertHtmlAtCurrentPos(chunk);
-};
-
-//Hibernation
-Tokenizer.prototype._hibernationSnapshot = function () {
-    this.consumedAfterSnapshot = 0;
-};
-
-Tokenizer.prototype._ensureHibernation = function () {
-    if (this.preprocessor.endOfChunkHit) {
-        for (; this.consumedAfterSnapshot > 0; this.consumedAfterSnapshot--)
-            this.preprocessor.retreat();
-
-        this.active = false;
-        this.tokenQueue.push({type: Tokenizer.HIBERNATION_TOKEN});
-
-        return true;
-    }
-
-    return false;
-};
-
-
-//Consumption
-Tokenizer.prototype._consume = function () {
-    this.consumedAfterSnapshot++;
-    return this.preprocessor.advance();
-};
-
-Tokenizer.prototype._unconsume = function () {
-    this.consumedAfterSnapshot--;
-    this.preprocessor.retreat();
-};
-
-Tokenizer.prototype._unconsumeSeveral = function (count) {
-    while (count--)
-        this._unconsume();
-};
-
-Tokenizer.prototype._reconsumeInState = function (state) {
-    this.state = state;
-    this._unconsume();
-};
-
-Tokenizer.prototype._consumeSubsequentIfMatch = function (pattern, startCp, caseSensitive) {
-    let consumedCount = 0;
-    let isMatch = true;
-    const patternLength = pattern.length;
-    let patternPos = 0;
-    let cp = startCp;
-    let patternCp = void 0;
-
-    for (; patternPos < patternLength; patternPos++) {
-        if (patternPos > 0) {
-            cp = this._consume();
-            consumedCount++;
-        }
-
-        if (cp === $.EOF) {
-            isMatch = false;
-            break;
-        }
-
-        patternCp = pattern[patternPos];
-
-        if (cp !== patternCp && (caseSensitive || cp !== toAsciiLowerCodePoint(patternCp))) {
-            isMatch = false;
-            break;
-        }
-    }
-
-    if (!isMatch)
-        this._unconsumeSeveral(consumedCount);
-
-    return isMatch;
-};
-
-//Lookahead
-Tokenizer.prototype._lookahead = function () {
-    const cp = this._consume();
-
-    this._unconsume();
-
-    return cp;
-};
-
-//Temp buffer
-Tokenizer.prototype.isTempBufferEqualToScriptString = function () {
-    if (this.tempBuff.length !== $$.SCRIPT_STRING.length)
-        return false;
-
-    for (let i = 0; i < this.tempBuff.length; i++) {
-        if (this.tempBuff[i] !== $$.SCRIPT_STRING[i])
-            return false;
-    }
-
-    return true;
-};
-
-//Token creation
-Tokenizer.prototype._createStartTagToken = function () {
-    this.currentToken = {
-        type: Tokenizer.START_TAG_TOKEN,
-        tagName: '',
-        selfClosing: false,
-        attrs: []
-    };
-};
-
-Tokenizer.prototype._createEndTagToken = function () {
-    this.currentToken = {
-        type: Tokenizer.END_TAG_TOKEN,
-        tagName: '',
-        attrs: []
-    };
-};
-
-Tokenizer.prototype._createCommentToken = function () {
-    this.currentToken = {
-        type: Tokenizer.COMMENT_TOKEN,
-        data: ''
-    };
-};
-
-Tokenizer.prototype._createDoctypeToken = function (initialName) {
-    this.currentToken = {
-        type: Tokenizer.DOCTYPE_TOKEN,
-        name: initialName,
-        forceQuirks: false,
-        publicId: null,
-        systemId: null
-    };
-};
-
-Tokenizer.prototype._createCharacterToken = function (type, ch) {
-    this.currentCharacterToken = {
-        type,
-        chars: ch
-    };
-};
-
-//Tag attributes
-Tokenizer.prototype._createAttr = function (attrNameFirstCh) {
-    this.currentAttr = {
-        name: attrNameFirstCh,
-        value: ''
-    };
-};
-
-Tokenizer.prototype._isDuplicateAttr = function () {
-    return Tokenizer.getTokenAttr(this.currentToken, this.currentAttr.name) !== null;
-};
-
-Tokenizer.prototype._leaveAttrName = function (toState) {
-    this.state = toState;
-
-    if (!this._isDuplicateAttr())
-        this.currentToken.attrs.push(this.currentAttr);
-};
-
-Tokenizer.prototype._leaveAttrValue = function (toState) {
-    this.state = toState;
-};
-
-//Appropriate end tag token
-//(see: http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#appropriate-end-tag-token)
-Tokenizer.prototype._isAppropriateEndTagToken = function () {
-    return this.lastStartTagName === this.currentToken.tagName;
-};
-
-//Token emission
-Tokenizer.prototype._emitCurrentToken = function () {
-    this._emitCurrentCharacterToken();
-
-    //NOTE: store emited start tag's tagName to determine is the following end tag token is appropriate.
-    if (this.currentToken.type === Tokenizer.START_TAG_TOKEN)
-        this.lastStartTagName = this.currentToken.tagName;
-
-    this.tokenQueue.push(this.currentToken);
-    this.currentToken = null;
-};
-
-Tokenizer.prototype._emitCurrentCharacterToken = function () {
-    if (this.currentCharacterToken) {
-        this.tokenQueue.push(this.currentCharacterToken);
-        this.currentCharacterToken = null;
-    }
-};
-
-Tokenizer.prototype._emitEOFToken = function () {
-    this._emitCurrentCharacterToken();
-    this.tokenQueue.push({type: Tokenizer.EOF_TOKEN});
-};
-
-//Characters emission
-
-//OPTIMIZATION: specification uses only one type of character tokens (one token per character).
-//This causes a huge memory overhead and a lot of unnecessary parser loops. parse5 uses 3 groups of characters.
-//If we have a sequence of characters that belong to the same group, parser can process it
-//as a single solid character token.
-//So, there are 3 types of character tokens in parse5:
-//1)NULL_CHARACTER_TOKEN - \u0000-character sequences (e.g. '\u0000\u0000\u0000')
-//2)WHITESPACE_CHARACTER_TOKEN - any whitespace/new-line character sequences (e.g. '\n  \r\t   \f')
-//3)CHARACTER_TOKEN - any character sequence which don't belong to groups 1 and 2 (e.g. 'abcdef1234@@#$%^')
-Tokenizer.prototype._appendCharToCurrentCharacterToken = function (type, ch) {
-    if (this.currentCharacterToken && this.currentCharacterToken.type !== type)
-        this._emitCurrentCharacterToken();
-
-    if (this.currentCharacterToken)
-        this.currentCharacterToken.chars += ch;
-
-    else
-        this._createCharacterToken(type, ch);
-};
-
-Tokenizer.prototype._emitCodePoint = function (cp) {
-    let type = Tokenizer.CHARACTER_TOKEN;
-
-    if (isWhitespace(cp))
-        type = Tokenizer.WHITESPACE_CHARACTER_TOKEN;
-
-    else if (cp === $.NULL)
-        type = Tokenizer.NULL_CHARACTER_TOKEN;
-
-    this._appendCharToCurrentCharacterToken(type, toChar(cp));
-};
-
-Tokenizer.prototype._emitSeveralCodePoints = function (codePoints) {
-    for (let i = 0; i < codePoints.length; i++)
-        this._emitCodePoint(codePoints[i]);
-};
-
-//NOTE: used then we emit character explicitly. This is always a non-whitespace and a non-null character.
-//So we can avoid additional checks here.
-Tokenizer.prototype._emitChar = function (ch) {
-    this._appendCharToCurrentCharacterToken(Tokenizer.CHARACTER_TOKEN, ch);
-};
-
-//Character reference tokenization
-Tokenizer.prototype._consumeNumericEntity = function (isHex) {
-    let digits = '';
-    let nextCp = void 0;
-
-    do {
-        digits += toChar(this._consume());
-        nextCp = this._lookahead();
-    } while (nextCp !== $.EOF && isDigit(nextCp, isHex));
-
-    if (this._lookahead() === $.SEMICOLON)
-        this._consume();
-
-    const referencedCp = parseInt(digits, isHex ? 16 : 10);
-    const replacement = NUMERIC_ENTITY_REPLACEMENTS[referencedCp];
-
-    if (replacement)
-        return replacement;
-
-    if (isReservedCodePoint(referencedCp))
-        return $.REPLACEMENT_CHARACTER;
-
-    return referencedCp;
-};
-
-// NOTE: for the details on this algorithm see
-// https://github.com/inikulin/parse5/tree/master/scripts/generate_named_entity_data/README.md
-Tokenizer.prototype._consumeNamedEntity = function (inAttr) {
-    let referencedCodePoints = null;
-    let referenceSize = 0;
-    let cp = null;
-    let consumedCount = 0;
-    let semicolonTerminated = false;
-
-    for (let i = 0; i > -1;) {
-        const current = neTree[i];
-        const inNode = current < MAX_BRANCH_MARKER_VALUE;
-        const nodeWithData = inNode && current & HAS_DATA_FLAG;
-
-        if (nodeWithData) {
-            referencedCodePoints = current & DATA_DUPLET_FLAG ? [neTree[++i], neTree[++i]] : [neTree[++i]];
-            referenceSize = consumedCount;
-
-            if (cp === $.SEMICOLON) {
-                semicolonTerminated = true;
-                break;
-            }
-        }
-
-        cp = this._consume();
-        consumedCount++;
-
-        if (cp === $.EOF)
-            break;
-
-        if (inNode)
-            i = current & HAS_BRANCHES_FLAG ? findNamedEntityTreeBranch(i, cp) : -1;
-
-        else
-            i = cp === current ? ++i : -1;
-    }
-
-
-    if (referencedCodePoints) {
-        if (!semicolonTerminated) {
-            //NOTE: unconsume excess (e.g. 'it' in '&notit')
-            this._unconsumeSeveral(consumedCount - referenceSize);
-
-            //NOTE: If the character reference is being consumed as part of an attribute and the next character
-            //is either a U+003D EQUALS SIGN character (=) or an alphanumeric ASCII character, then, for historical
-            //reasons, all the characters that were matched after the U+0026 AMPERSAND character (&) must be
-            //unconsumed, and nothing is returned.
-            //However, if this next character is in fact a U+003D EQUALS SIGN character (=), then this is a
-            //parse error, because some legacy user agents will misinterpret the markup in those cases.
-            //(see: http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#tokenizing-character-references)
-            if (inAttr) {
-                const nextCp = this._lookahead();
-
-                if (nextCp === $.EQUALS_SIGN || isAsciiAlphaNumeric(nextCp)) {
-                    this._unconsumeSeveral(referenceSize);
-                    return null;
-                }
-            }
-        }
-
-        return referencedCodePoints;
-    }
-
-    this._unconsumeSeveral(consumedCount);
-
-    return null;
-};
-
-Tokenizer.prototype._consumeCharacterReference = function (startCp, inAttr) {
-    if (isWhitespace(startCp) || startCp === $.GREATER_THAN_SIGN ||
-        startCp === $.AMPERSAND || startCp === this.additionalAllowedCp || startCp === $.EOF) {
-        //NOTE: not a character reference. No characters are consumed, and nothing is returned.
-        this._unconsume();
-        return null;
-    }
-
-    if (startCp === $.NUMBER_SIGN) {
-        //NOTE: we have a numeric entity candidate, now we should determine if it's hex or decimal
-        let isHex = false;
-
-        let nextCp = this._lookahead();
-
-        if (nextCp === $.LATIN_SMALL_X || nextCp === $.LATIN_CAPITAL_X) {
-            this._consume();
-            isHex = true;
-        }
-
-        nextCp = this._lookahead();
-
-        //NOTE: if we have at least one digit this is a numeric entity for sure, so we consume it
-        if (nextCp !== $.EOF && isDigit(nextCp, isHex))
-            return [this._consumeNumericEntity(isHex)];
-
-        //NOTE: otherwise this is a bogus number entity and a parse error. Unconsume the number sign
-        //and the 'x'-character if appropriate.
-        this._unconsumeSeveral(isHex ? 2 : 1);
-        return null;
-    }
-
-    this._unconsume();
-
-    return this._consumeNamedEntity(inAttr);
 };
 
 //State machine
@@ -2148,3 +2149,5 @@ _[CDATA_SECTION_STATE] = function cdataSectionState(cp) {
         }
     }
 };
+
+export default Tokenizer;

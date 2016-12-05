@@ -24,130 +24,130 @@ const DEFAULT_BUFFER_WATERLINE = 1 << 16;
 //Preprocessor
 //NOTE: HTML input preprocessing
 //(see: http://www.whatwg.org/specs/web-apps/current-work/multipage/parsing.html#preprocessing-the-input-stream)
-const Preprocessor = module.exports = function () {
-    this.html = null;
+class Preprocessor {
+    constructor() {
+        this.html = null;
 
-    this.pos = -1;
-    this.lastGapPos = -1;
-    this.lastCharPos = -1;
-    this.droppedBufferSize = 0;
+        this.pos = -1;
+        this.lastGapPos = -1;
+        this.lastCharPos = -1;
+        this.droppedBufferSize = 0;
 
-    this.gapStack = [];
+        this.gapStack = [];
 
-    this.skipNextNewLine = false;
+        this.skipNextNewLine = false;
 
-    this.lastChunkWritten = false;
-    this.endOfChunkHit = false;
-    this.bufferWaterline = DEFAULT_BUFFER_WATERLINE;
-};
+        this.lastChunkWritten = false;
+        this.endOfChunkHit = false;
+        this.bufferWaterline = DEFAULT_BUFFER_WATERLINE;
+    }
 
-Object.defineProperty(Preprocessor.prototype, 'sourcePos', {
-    get() {
+    get sourcePos() {
         return this.droppedBufferSize + this.pos;
     }
-});
 
-Preprocessor.prototype.dropParsedChunk = function () {
-    if (this.pos > this.bufferWaterline) {
-        this.lastCharPos -= this.pos;
-        this.droppedBufferSize += this.pos;
-        this.html = this.html.substring(this.pos);
-        this.pos = 0;
-        this.lastGapPos = -1;
-        this.gapStack = [];
-    }
-};
-
-Preprocessor.prototype._addGap = function () {
-    this.gapStack.push(this.lastGapPos);
-    this.lastGapPos = this.pos;
-};
-
-Preprocessor.prototype._processHighRangeCodePoint = function (cp) {
-    //NOTE: try to peek a surrogate pair
-    if (this.pos !== this.lastCharPos) {
-        const nextCp = this.html.charCodeAt(this.pos + 1);
-
-        if (isSurrogatePair(cp, nextCp)) {
-            //NOTE: we have a surrogate pair. Peek pair character and recalculate code point.
-            this.pos++;
-            cp = getSurrogatePairCodePoint(cp, nextCp);
-
-            //NOTE: add gap that should be avoided during retreat
-            this._addGap();
+    dropParsedChunk() {
+        if (this.pos > this.bufferWaterline) {
+            this.lastCharPos -= this.pos;
+            this.droppedBufferSize += this.pos;
+            this.html = this.html.substring(this.pos);
+            this.pos = 0;
+            this.lastGapPos = -1;
+            this.gapStack = [];
         }
     }
 
-    // NOTE: we've hit the end of chunk, stop processing at this point
-    else if (!this.lastChunkWritten) {
-        this.endOfChunkHit = true;
-        return $.EOF;
+    _addGap() {
+        this.gapStack.push(this.lastGapPos);
+        this.lastGapPos = this.pos;
     }
 
-    return cp;
-};
+    _processHighRangeCodePoint(cp) {
+        //NOTE: try to peek a surrogate pair
+        if (this.pos !== this.lastCharPos) {
+            const nextCp = this.html.charCodeAt(this.pos + 1);
 
-Preprocessor.prototype.write = function (chunk, isLastChunk) {
-    if (this.html)
-        this.html += chunk;
+            if (isSurrogatePair(cp, nextCp)) {
+                //NOTE: we have a surrogate pair. Peek pair character and recalculate code point.
+                this.pos++;
+                cp = getSurrogatePairCodePoint(cp, nextCp);
 
-    else
-        this.html = chunk;
+                //NOTE: add gap that should be avoided during retreat
+                this._addGap();
+            }
+        }
 
-    this.lastCharPos = this.html.length - 1;
-    this.endOfChunkHit = false;
-    this.lastChunkWritten = isLastChunk;
-};
-
-Preprocessor.prototype.insertHtmlAtCurrentPos = function (chunk) {
-    this.html = this.html.substring(0, this.pos + 1) +
-                chunk +
-                this.html.substring(this.pos + 1, this.html.length);
-
-    this.lastCharPos = this.html.length - 1;
-    this.endOfChunkHit = false;
-};
-
-
-Preprocessor.prototype.advance = function () {
-    this.pos++;
-
-    if (this.pos > this.lastCharPos) {
-        if (!this.lastChunkWritten)
+        // NOTE: we've hit the end of chunk, stop processing at this point
+        else if (!this.lastChunkWritten) {
             this.endOfChunkHit = true;
+            return $.EOF;
+        }
 
-        return $.EOF;
+        return cp;
     }
 
-    const cp = this.html.charCodeAt(this.pos);
+    write(chunk, isLastChunk) {
+        if (this.html)
+            this.html += chunk;
 
-    //NOTE: any U+000A LINE FEED (LF) characters that immediately follow a U+000D CARRIAGE RETURN (CR) character
-    //must be ignored.
-    if (this.skipNextNewLine && cp === $.LINE_FEED) {
+        else
+            this.html = chunk;
+
+        this.lastCharPos = this.html.length - 1;
+        this.endOfChunkHit = false;
+        this.lastChunkWritten = isLastChunk;
+    }
+
+    insertHtmlAtCurrentPos(chunk) {
+        this.html = this.html.substring(0, this.pos + 1) +
+                    chunk +
+                    this.html.substring(this.pos + 1, this.html.length);
+
+        this.lastCharPos = this.html.length - 1;
+        this.endOfChunkHit = false;
+    }
+
+    advance() {
+        this.pos++;
+
+        if (this.pos > this.lastCharPos) {
+            if (!this.lastChunkWritten)
+                this.endOfChunkHit = true;
+
+            return $.EOF;
+        }
+
+        const cp = this.html.charCodeAt(this.pos);
+
+        //NOTE: any U+000A LINE FEED (LF) characters that immediately follow a U+000D CARRIAGE RETURN (CR) character
+        //must be ignored.
+        if (this.skipNextNewLine && cp === $.LINE_FEED) {
+            this.skipNextNewLine = false;
+            this._addGap();
+            return this.advance();
+        }
+
+        //NOTE: all U+000D CARRIAGE RETURN (CR) characters must be converted to U+000A LINE FEED (LF) characters
+        if (cp === $.CARRIAGE_RETURN) {
+            this.skipNextNewLine = true;
+            return $.LINE_FEED;
+        }
+
         this.skipNextNewLine = false;
-        this._addGap();
-        return this.advance();
+
+        //OPTIMIZATION: first perform check if the code point in the allowed range that covers most common
+        //HTML input (e.g. ASCII codes) to avoid performance-cost operations for high-range code points.
+        return cp >= 0xD800 ? this._processHighRangeCodePoint(cp) : cp;
     }
 
-    //NOTE: all U+000D CARRIAGE RETURN (CR) characters must be converted to U+000A LINE FEED (LF) characters
-    if (cp === $.CARRIAGE_RETURN) {
-        this.skipNextNewLine = true;
-        return $.LINE_FEED;
-    }
+    retreat() {
+        if (this.pos === this.lastGapPos) {
+            this.lastGapPos = this.gapStack.pop();
+            this.pos--;
+        }
 
-    this.skipNextNewLine = false;
-
-    //OPTIMIZATION: first perform check if the code point in the allowed range that covers most common
-    //HTML input (e.g. ASCII codes) to avoid performance-cost operations for high-range code points.
-    return cp >= 0xD800 ? this._processHighRangeCodePoint(cp) : cp;
-};
-
-Preprocessor.prototype.retreat = function () {
-    if (this.pos === this.lastGapPos) {
-        this.lastGapPos = this.gapStack.pop();
         this.pos--;
     }
+}
 
-    this.pos--;
-};
-
+export default Preprocessor;
