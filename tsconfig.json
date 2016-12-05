@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+         "allowJs": true,
+         "allowUnreachableCode": false,
+         "allowUnusedLabels": false,
+         "module": "commonjs",
+         "moduleResolution": "node",
+         "noFallthroughCasesInSwitch": true,
+         "noImplicitAny": true,
+         "noImplicitReturns": true,
+         "noImplicitThis": true,
+         "noUnusedLocals": true,
+         "outDir": "lib",
+         "rootDir": "src",
+         "strictNullChecks": true,
+         "target": "es5"
+    },
+    "compileOnSave": true,
+    "include": [
+        "src/**/*"
+    ]
+}

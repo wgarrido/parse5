@@ -1,6 +1,6 @@
-/// <reference path="../../lib/index.d.ts" />
+/// <reference path="../../src/index.d.ts" />
 /// <reference types="node" />
-import * as parse5 from '../../lib';
+import * as parse5 from '../../src';
 import { createReadStream, createWriteStream } from 'fs';
 
 

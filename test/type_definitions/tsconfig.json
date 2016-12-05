@@ -6,7 +6,7 @@
     "noImplicitAny": true
   },
   "files": [
-    "../lib/index.d.ts",
+    "../src/index.d.ts",
     "./test.ts"
   ]
 }

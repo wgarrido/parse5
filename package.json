@@ -50,7 +50,7 @@
   ],
   "license": "MIT",
   "main": "./lib/index.js",
-  "types": "./lib/index.d.ts",
+  "types": "./src/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git://github.com/inikulin/parse5.git"
@@ -61,7 +61,8 @@
     "prepublish": "publish-please guard"
   },
   "files": [
-    "lib"
+    "lib",
+    "src/index.d.ts"
   ],
   "dependencies": {
     "@types/node": "^6.0.46"

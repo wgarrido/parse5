@@ -2,23 +2,27 @@
 
 var fork = require('child_process').fork,
     gulp = require('gulp'),
-    eslint = require('gulp-eslint'),
-    mocha = require('gulp-mocha'),
     install = require('gulp-install'),
-    benchmark = require('gulp-benchmark'),
     rename = require('gulp-rename'),
-    download = require('gulp-download'),
-    typedoc = require('gulp-typedoc'),
     typescript = require('gulp-typescript'),
-    through = require('through2'),
-    generateNamedEntityData = require('./scripts/generate_named_entity_data'),
-    generateParserFeedbackTest = require('./scripts/generate_parser_feedback_test');
+    through = require('through2');
 
+// Transpile
+gulp.task('transpile', function () {
+    var project = typescript.createProject('tsconfig.json');
+
+    return project
+        .src()
+        .pipe(project())
+        .pipe(gulp.dest('lib'));
+});
 
 // Docs
 gulp.task('docs', function () {
+    var typedoc = require('gulp-typedoc');
+
     return gulp
-        .src('lib/index.d.ts')
+        .src('src/index.d.ts')
         .pipe(typedoc({
             includeDeclarations: true,
             excludeExternals: true,
@@ -37,7 +41,9 @@ gulp.task('install-upstream-parse5', function () {
         .pipe(install());
 });
 
-gulp.task('benchmark', ['install-upstream-parse5'], function () {
+gulp.task('benchmark', ['transpile', 'install-upstream-parse5'], function () {
+    var benchmark = require('gulp-benchmark');
+
     return gulp
         .src('test/benchmark/*.js', {read: false})
         .pipe(benchmark({
@@ -52,7 +58,7 @@ gulp.task('install-memory-benchmark-dependencies', function () {
         .pipe(install());
 });
 
-gulp.task('sax-parser-memory-benchmark', ['install-memory-benchmark-dependencies'], function (done) {
+gulp.task('sax-parser-memory-benchmark', ['transpile', 'install-memory-benchmark-dependencies'], function (done) {
     fork('./test/memory_benchmark/sax_parser').once('close', done);
 });
 
@@ -63,9 +69,11 @@ gulp.task('named-entity-data-memory-benchmark', function (done) {
 
 // Test
 gulp.task('lint', function () {
+    var eslint = require('gulp-eslint');
+
     return gulp
         .src([
-            'lib/**/*.js',
+            'src/**/*.js',
             'test/**/*.js',
             'scripts/**/*.js',
             'Gulpfile.js'
@@ -88,7 +96,9 @@ gulp.task('test-type-definitions', function () {
         });
 });
 
-gulp.task('test', ['lint', 'test-type-definitions'], function () {
+gulp.task('test', ['lint', 'test-type-definitions', 'transpile'], function () {
+    var mocha = require('gulp-mocha');
+
     return gulp
         .src('test/fixtures/*_test.js')
         .pipe(mocha({
@@ -100,7 +110,9 @@ gulp.task('test', ['lint', 'test-type-definitions'], function () {
 
 
 // Scripts
-gulp.task('update-feedback-tests', function () {
+gulp.task('update-feedback-tests', ['transpile'], function () {
+    var generateParserFeedbackTest = require('./scripts/generate_parser_feedback_test');
+
     return gulp
         .src(['test/data/tree_construction/*.dat', 'test/data/tree_construction_regression/*.dat'])
         .pipe(through.obj(function (file, encoding, callback) {
@@ -116,6 +128,9 @@ gulp.task('update-feedback-tests', function () {
 
 
 gulp.task('update-named-entities-data', function () {
+    var generateNamedEntityData = require('./scripts/generate_named_entity_data');
+    var download = require('gulp-download');
+
     return download('https://html.spec.whatwg.org/multipage/entities.json')
         .pipe(through.obj(function (file, encoding, callback) {
             var entitiesData = JSON.parse(file.contents.toString());
@@ -125,5 +140,5 @@ gulp.task('update-named-entities-data', function () {
             callback(null, file);
         }))
         .pipe(rename('named_entity_data.js'))
-        .pipe(gulp.dest('lib/tokenizer'));
+        .pipe(gulp.dest('src/tokenizer'));
 });

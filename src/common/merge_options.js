@@ -6,4 +6,4 @@ export default function mergeOptions(defaults, options = Object.create(null)) {
 
         return merged;
     }, Object.create(null));
-};
+}
