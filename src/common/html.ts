@@ -1,10 +1,18 @@
+type NS =
+    'http://www.w3.org/1999/xhtml' |
+    'http://www.w3.org/1998/Math/MathML' |
+    'http://www.w3.org/2000/svg' |
+    'http://www.w3.org/1999/xlink' |
+    'http://www.w3.org/XML/1998/namespace' |
+    'http://www.w3.org/2000/xmlns/';
+
 const NS = {
-    HTML: 'http://www.w3.org/1999/xhtml',
-    MATHML: 'http://www.w3.org/1998/Math/MathML',
-    SVG: 'http://www.w3.org/2000/svg',
-    XLINK: 'http://www.w3.org/1999/xlink',
-    XML: 'http://www.w3.org/XML/1998/namespace',
-    XMLNS: 'http://www.w3.org/2000/xmlns/'
+    HTML: 'http://www.w3.org/1999/xhtml' as NS,
+    MATHML: 'http://www.w3.org/1998/Math/MathML' as NS,
+    SVG: 'http://www.w3.org/2000/svg' as NS,
+    XLINK: 'http://www.w3.org/1999/xlink' as NS,
+    XML: 'http://www.w3.org/XML/1998/namespace' as NS,
+    XMLNS: 'http://www.w3.org/2000/xmlns/' as NS
 };
 
 export { NS as NAMESPACES };

@@ -580,6 +580,15 @@ export default class Tokenizer {
 
         return this._consumeNamedEntity(inAttr);
     }
+
+    static getTokenAttr(token, attrName) {
+        for (let i = token.attrs.length - 1; i >= 0; i--) {
+            if (token.attrs[i].name === attrName)
+                return token.attrs[i].value;
+        }
+
+        return null;
+    }
 }
 
 //Token types
@@ -600,16 +609,6 @@ Tokenizer.MODE = Tokenizer.prototype.MODE = {
     RAWTEXT: RAWTEXT_STATE,
     SCRIPT_DATA: SCRIPT_DATA_STATE,
     PLAINTEXT: PLAINTEXT_STATE
-};
-
-//Static
-Tokenizer.getTokenAttr = (token, attrName) => {
-    for (let i = token.attrs.length - 1; i >= 0; i--) {
-        if (token.attrs[i].name === attrName)
-            return token.attrs[i].value;
-    }
-
-    return null;
 };
 
 //State machine
