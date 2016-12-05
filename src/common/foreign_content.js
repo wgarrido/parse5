@@ -130,52 +130,54 @@ export const SVG_TAG_NAMES_ADJUSTMENT_MAP = {
 };
 
 //Tags that causes exit from foreign content
-const EXITS_FOREIGN_CONTENT = Object.create(null);
+const EXITS_FOREIGN_CONTENT = {
+    __proto__: null,
 
-EXITS_FOREIGN_CONTENT[$.B] = true;
-EXITS_FOREIGN_CONTENT[$.BIG] = true;
-EXITS_FOREIGN_CONTENT[$.BLOCKQUOTE] = true;
-EXITS_FOREIGN_CONTENT[$.BODY] = true;
-EXITS_FOREIGN_CONTENT[$.BR] = true;
-EXITS_FOREIGN_CONTENT[$.CENTER] = true;
-EXITS_FOREIGN_CONTENT[$.CODE] = true;
-EXITS_FOREIGN_CONTENT[$.DD] = true;
-EXITS_FOREIGN_CONTENT[$.DIV] = true;
-EXITS_FOREIGN_CONTENT[$.DL] = true;
-EXITS_FOREIGN_CONTENT[$.DT] = true;
-EXITS_FOREIGN_CONTENT[$.EM] = true;
-EXITS_FOREIGN_CONTENT[$.EMBED] = true;
-EXITS_FOREIGN_CONTENT[$.H1] = true;
-EXITS_FOREIGN_CONTENT[$.H2] = true;
-EXITS_FOREIGN_CONTENT[$.H3] = true;
-EXITS_FOREIGN_CONTENT[$.H4] = true;
-EXITS_FOREIGN_CONTENT[$.H5] = true;
-EXITS_FOREIGN_CONTENT[$.H6] = true;
-EXITS_FOREIGN_CONTENT[$.HEAD] = true;
-EXITS_FOREIGN_CONTENT[$.HR] = true;
-EXITS_FOREIGN_CONTENT[$.I] = true;
-EXITS_FOREIGN_CONTENT[$.IMG] = true;
-EXITS_FOREIGN_CONTENT[$.LI] = true;
-EXITS_FOREIGN_CONTENT[$.LISTING] = true;
-EXITS_FOREIGN_CONTENT[$.MENU] = true;
-EXITS_FOREIGN_CONTENT[$.META] = true;
-EXITS_FOREIGN_CONTENT[$.NOBR] = true;
-EXITS_FOREIGN_CONTENT[$.OL] = true;
-EXITS_FOREIGN_CONTENT[$.P] = true;
-EXITS_FOREIGN_CONTENT[$.PRE] = true;
-EXITS_FOREIGN_CONTENT[$.RUBY] = true;
-EXITS_FOREIGN_CONTENT[$.S] = true;
-EXITS_FOREIGN_CONTENT[$.SMALL] = true;
-EXITS_FOREIGN_CONTENT[$.SPAN] = true;
-EXITS_FOREIGN_CONTENT[$.STRONG] = true;
-EXITS_FOREIGN_CONTENT[$.STRIKE] = true;
-EXITS_FOREIGN_CONTENT[$.SUB] = true;
-EXITS_FOREIGN_CONTENT[$.SUP] = true;
-EXITS_FOREIGN_CONTENT[$.TABLE] = true;
-EXITS_FOREIGN_CONTENT[$.TT] = true;
-EXITS_FOREIGN_CONTENT[$.U] = true;
-EXITS_FOREIGN_CONTENT[$.UL] = true;
-EXITS_FOREIGN_CONTENT[$.VAR] = true;
+    [$.B]: true,
+    [$.BIG]: true,
+    [$.BLOCKQUOTE]: true,
+    [$.BODY]: true,
+    [$.BR]: true,
+    [$.CENTER]: true,
+    [$.CODE]: true,
+    [$.DD]: true,
+    [$.DIV]: true,
+    [$.DL]: true,
+    [$.DT]: true,
+    [$.EM]: true,
+    [$.EMBED]: true,
+    [$.H1]: true,
+    [$.H2]: true,
+    [$.H3]: true,
+    [$.H4]: true,
+    [$.H5]: true,
+    [$.H6]: true,
+    [$.HEAD]: true,
+    [$.HR]: true,
+    [$.I]: true,
+    [$.IMG]: true,
+    [$.LI]: true,
+    [$.LISTING]: true,
+    [$.MENU]: true,
+    [$.META]: true,
+    [$.NOBR]: true,
+    [$.OL]: true,
+    [$.P]: true,
+    [$.PRE]: true,
+    [$.RUBY]: true,
+    [$.S]: true,
+    [$.SMALL]: true,
+    [$.SPAN]: true,
+    [$.STRONG]: true,
+    [$.STRIKE]: true,
+    [$.SUB]: true,
+    [$.SUP]: true,
+    [$.TABLE]: true,
+    [$.TT]: true,
+    [$.U]: true,
+    [$.UL]: true,
+    [$.VAR]: true
+};
 
 //Check exit from foreign content
 export function causesExit(startTagToken) {
