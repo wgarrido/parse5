@@ -191,31 +191,31 @@ export function causesExit(startTagToken) {
 
 //Token adjustments
 export function adjustTokenMathMLAttrs(token) {
-    for (let i = 0; i < token.attrs.length; i++) {
-        if (token.attrs[i].name === DEFINITION_URL_ATTR) {
-            token.attrs[i].name = ADJUSTED_DEFINITION_URL_ATTR;
+    for (const attr of token.attrs) {
+        if (attr.name === DEFINITION_URL_ATTR) {
+            attr.name = ADJUSTED_DEFINITION_URL_ATTR;
             break;
         }
     }
 }
 
 export function adjustTokenSVGAttrs(token) {
-    for (let i = 0; i < token.attrs.length; i++) {
-        const adjustedAttrName = SVG_ATTRS_ADJUSTMENT_MAP[token.attrs[i].name];
+    for (const attr of token.attrs) {
+        const adjustedAttrName = SVG_ATTRS_ADJUSTMENT_MAP[attr.name];
 
         if (adjustedAttrName)
-            token.attrs[i].name = adjustedAttrName;
+            attr.name = adjustedAttrName;
     }
 }
 
 export function adjustTokenXMLAttrs(token) {
-    for (let i = 0; i < token.attrs.length; i++) {
-        const adjustedAttrEntry = XML_ATTRS_ADJUSTMENT_MAP[token.attrs[i].name];
+    for (const attr of token.attrs) {
+        const adjustedAttrEntry = XML_ATTRS_ADJUSTMENT_MAP[attr.name];
 
         if (adjustedAttrEntry) {
-            token.attrs[i].prefix = adjustedAttrEntry.prefix;
-            token.attrs[i].name = adjustedAttrEntry.name;
-            token.attrs[i].namespace = adjustedAttrEntry.namespace;
+            attr.prefix = adjustedAttrEntry.prefix;
+            attr.name = adjustedAttrEntry.name;
+            attr.namespace = adjustedAttrEntry.namespace;
         }
     }
 }
@@ -234,9 +234,9 @@ function isMathMLTextIntegrationPoint(tn, ns) {
 
 function isHtmlIntegrationPoint(tn, ns, attrs) {
     if (ns === NS.MATHML && tn === $.ANNOTATION_XML) {
-        for (let i = 0; i < attrs.length; i++) {
-            if (attrs[i].name === ATTRS.ENCODING) {
-                const value = attrs[i].value.toLowerCase();
+        for (const attr of attrs) {
+            if (attr.name === ATTRS.ENCODING) {
+                const value = attr.value.toLowerCase();
 
                 return value === MIME_TYPES.TEXT_HTML || value === MIME_TYPES.APPLICATION_XML;
             }

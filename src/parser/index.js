@@ -2260,16 +2260,14 @@ function characterInTableText(p, token) {
 }
 
 function tokenInTableText(p, token) {
-    let i = 0;
-
     if (p.hasNonWhitespacePendingCharacterToken) {
-        for (; i < p.pendingCharacterTokens.length; i++)
-            tokenInTable(p, p.pendingCharacterTokens[i]);
+        for (const pendingToken of p.pendingCharacterTokens)
+            tokenInTable(p, pendingToken);
     }
 
     else {
-        for (; i < p.pendingCharacterTokens.length; i++)
-            p._insertCharacters(p.pendingCharacterTokens[i]);
+        for (const pendingToken of p.pendingCharacterTokens)
+            p._insertCharacters(pendingToken);
     }
 
     p.insertionMode = p.originalInsertionMode;

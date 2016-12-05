@@ -88,12 +88,12 @@ export function createElement(tagName, namespaceURI, attrs) {
     const attribsNamespace = Object.create(null);
     const attribsPrefix = Object.create(null);
 
-    for (let i = 0; i < attrs.length; i++) {
-        const attrName = attrs[i].name;
+    for (const attr of attrs) {
+        const attrName = attr.name;
 
-        attribs[attrName] = attrs[i].value;
-        attribsNamespace[attrName] = attrs[i].namespace;
-        attribsPrefix[attrName] = attrs[i].prefix;
+        attribs[attrName] = attr.value;
+        attribsNamespace[attrName] = attr.namespace;
+        attribsPrefix[attrName] = attr.prefix;
     }
 
     return new Node({
@@ -170,9 +170,9 @@ export function setDocumentType(document, name, publicId, systemId) {
     const data = serializeContent(name, publicId, systemId);
     let doctypeNode = null;
 
-    for (let i = 0; i < document.children.length; i++) {
-        if (document.children[i].type === 'directive' && document.children[i].name === '!doctype') {
-            doctypeNode = document.children[i];
+    for (const child of document.children) {
+        if (child.type === 'directive' && child.name === '!doctype') {
+            doctypeNode = child;
             break;
         }
     }
@@ -243,13 +243,13 @@ export function insertTextBefore(parentNode, text, referenceNode) {
 }
 
 export function adoptAttributes(recipient, attrs) {
-    for (let i = 0; i < attrs.length; i++) {
-        const attrName = attrs[i].name;
+    for (const attr of attrs) {
+        const attrName = attr.name;
 
         if (typeof recipient.attribs[attrName] === 'undefined') {
-            recipient.attribs[attrName] = attrs[i].value;
-            recipient['x-attribsNamespace'][attrName] = attrs[i].namespace;
-            recipient['x-attribsPrefix'][attrName] = attrs[i].prefix;
+            recipient.attribs[attrName] = attr.value;
+            recipient['x-attribsNamespace'][attrName] = attr.namespace;
+            recipient['x-attribsPrefix'][attrName] = attr.prefix;
         }
     }
 }

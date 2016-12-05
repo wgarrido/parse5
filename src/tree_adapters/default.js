@@ -66,9 +66,9 @@ export function getTemplateContent(templateElement) {
 export function setDocumentType(document, name, publicId, systemId) {
     let doctypeNode = null;
 
-    for (let i = 0; i < document.childNodes.length; i++) {
-        if (document.childNodes[i].nodeName === '#documentType') {
-            doctypeNode = document.childNodes[i];
+    for (const childNode of document.childNodes) {
+        if (childNode.nodeName === '#documentType') {
+            doctypeNode = childNode;
             break;
         }
     }
@@ -131,12 +131,12 @@ export function insertTextBefore(parentNode, text, referenceNode) {
 export function adoptAttributes(recipient, attrs) {
     const recipientAttrsMap = [];
 
-    for (let i = 0; i < recipient.attrs.length; i++)
-        recipientAttrsMap.push(recipient.attrs[i].name);
+    for (const attr of recipient.attrs)
+        recipientAttrsMap.push(attr.name);
 
-    for (let j = 0; j < attrs.length; j++) {
-        if (recipientAttrsMap.indexOf(attrs[j].name) === -1)
-            recipient.attrs.push(attrs[j]);
+    for (const attr of attrs) {
+        if (recipientAttrsMap.indexOf(attr.name) === -1)
+            recipient.attrs.push(attr);
     }
 }
 

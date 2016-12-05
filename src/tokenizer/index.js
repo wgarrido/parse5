@@ -442,8 +442,8 @@ export default class Tokenizer {
     }
 
     _emitSeveralCodePoints(codePoints) {
-        for (let i = 0; i < codePoints.length; i++)
-            this._emitCodePoint(codePoints[i]);
+        for (const cp of codePoints)
+            this._emitCodePoint(cp);
     }
 
     //NOTE: used then we emit character explicitly. This is always a non-whitespace and a non-null character.
@@ -1542,8 +1542,8 @@ _[CHARACTER_REFERENCE_IN_ATTRIBUTE_VALUE_STATE] = function characterReferenceInA
 
     if (!this._ensureHibernation()) {
         if (referencedCodePoints) {
-            for (let i = 0; i < referencedCodePoints.length; i++)
-                this.currentAttr.value += toChar(referencedCodePoints[i]);
+            for (const refCp of referencedCodePoints)
+                this.currentAttr.value += toChar(refCp);
         }
         else
             this.currentAttr.value += '&';

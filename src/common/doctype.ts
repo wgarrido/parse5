@@ -105,8 +105,8 @@ function enquoteDoctypeId(id: string) {
 }
 
 function hasPrefix(publicId: string, prefixes: string[]) {
-    for (let i = 0; i < prefixes.length; i++) {
-        if (publicId.indexOf(prefixes[i]) === 0)
+    for (const prefix of prefixes) {
+        if (publicId.indexOf(prefix) === 0)
             return true;
     }
 

@@ -52,13 +52,10 @@ export default class FormattingElementList {
             const neAttrsMap = Object.create(null);
 
             //NOTE: build attrs map for the new element so we can perform fast lookups
-            for (var i = 0; i < neAttrsLength; i++) {
-                const neAttr = neAttrs[i];
-
+            for (const neAttr of neAttrs)
                 neAttrsMap[neAttr.name] = neAttr.value;
-            }
 
-            for (i = 0; i < neAttrsLength; i++) {
+            for (let i = 0; i < neAttrsLength; i++) {
                 for (let j = 0; j < cLength; j++) {
                     const cAttr = candidates[j].attrs[i];
 
@@ -73,7 +70,7 @@ export default class FormattingElementList {
             }
 
             //NOTE: remove bottommost candidates until Noah's Ark condition will not be met
-            for (i = cLength - 1; i >= NOAH_ARK_CAPACITY - 1; i--) {
+            for (let i = cLength - 1; i >= NOAH_ARK_CAPACITY - 1; i--) {
                 this.entries.splice(candidates[i].idx, 1);
                 this.length--;
             }
