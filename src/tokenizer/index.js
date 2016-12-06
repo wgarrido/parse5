@@ -582,9 +582,9 @@ export default class Tokenizer {
     }
 
     static getTokenAttr(token, attrName) {
-        for (let i = token.attrs.length - 1; i >= 0; i--) {
-            if (token.attrs[i].name === attrName)
-                return token.attrs[i].value;
+        for (const attr of token.attrs) {
+            if (attr.name === attrName)
+                return attr.value;
         }
 
         return null;
