@@ -1,4 +1,5 @@
 import Tokenizer from '../tokenizer';
+import getTokenAttr from '../tokenizer/get_token_attr';
 import OpenElementStack from './open_element_stack';
 import FormattingElementList from './formatting_element_list';
 import { assign as mixLocationInfo } from '../location_info/parser_mixin';
@@ -1391,7 +1392,7 @@ function inputStartTagInBody(p, token) {
     p._reconstructActiveFormattingElements();
     p._appendElement(token, NS.HTML);
 
-    const inputType = Tokenizer.getTokenAttr(token, ATTRS.TYPE);
+    const inputType = getTokenAttr(token, ATTRS.TYPE);
 
     if (!inputType || inputType.toLowerCase() !== HIDDEN_INPUT_TYPE)
         p.framesetOk = false;
@@ -2119,7 +2120,7 @@ function tableStartTagInTable(p, token) {
 }
 
 function inputStartTagInTable(p, token) {
-    const inputType = Tokenizer.getTokenAttr(token, ATTRS.TYPE);
+    const inputType = getTokenAttr(token, ATTRS.TYPE);
 
     if (inputType && inputType.toLowerCase() === HIDDEN_INPUT_TYPE)
         p._appendElement(token, NS.HTML);

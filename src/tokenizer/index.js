@@ -2,6 +2,7 @@ import Preprocessor from './preprocessor';
 import { assign as mixLocationInfo } from '../location_info/tokenizer_mixin';
 import { CODE_POINTS as $, CODE_POINT_SEQUENCES as $$, REPLACEMENT_CHARACTER } from '../common/unicode';
 import * as neTree from './named_entity_data';
+import getTokenAttr from './get_token_attr';
 
 //Replacement code points for numeric entities
 const NUMERIC_ENTITY_REPLACEMENTS = {
@@ -364,7 +365,7 @@ export default class Tokenizer {
     }
 
     _isDuplicateAttr() {
-        return Tokenizer.getTokenAttr(this.currentToken, this.currentAttr.name) !== null;
+        return getTokenAttr(this.currentToken, this.currentAttr.name) !== null;
     }
 
     _leaveAttrName(toState) {
@@ -580,16 +581,9 @@ export default class Tokenizer {
 
         return this._consumeNamedEntity(inAttr);
     }
-
-    static getTokenAttr(token, attrName) {
-        for (const attr of token.attrs) {
-            if (attr.name === attrName)
-                return attr.value;
-        }
-
-        return null;
-    }
 }
+
+Tokenizer.getTokenAttr = getTokenAttr;
 
 //Token types
 Tokenizer.CHARACTER_TOKEN = 'CHARACTER_TOKEN';

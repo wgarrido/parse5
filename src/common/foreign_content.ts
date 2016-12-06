@@ -1,4 +1,5 @@
-import Tokenizer from '../tokenizer';
+import getTokenAttr from '../tokenizer/get_token_attr';
+import { StartTagToken, Attr } from '../tokenizer/tokens';
 import { TAG_NAMES as $, NAMESPACES as NS, ATTRS } from './html';
 
 //MIME types
@@ -12,7 +13,14 @@ const DEFINITION_URL_ATTR = 'definitionurl';
 
 const ADJUSTED_DEFINITION_URL_ATTR = 'definitionURL';
 
-const SVG_ATTRS_ADJUSTMENT_MAP = {
+interface StringMap<V> {
+    __proto__: null;
+    [key: string]: V | undefined | null;
+}
+
+const SVG_ATTRS_ADJUSTMENT_MAP: StringMap<string> = {
+    __proto__: null,
+
     'attributename': 'attributeName',
     'attributetype': 'attributeType',
     'basefrequency': 'baseFrequency',
@@ -73,7 +81,9 @@ const SVG_ATTRS_ADJUSTMENT_MAP = {
     'zoomandpan': 'zoomAndPan'
 };
 
-const XML_ATTRS_ADJUSTMENT_MAP = {
+const XML_ATTRS_ADJUSTMENT_MAP: StringMap<{ prefix: string, name: string, namespace: NS }> = {
+    __proto__: null,
+
     'xlink:actuate': {prefix: 'xlink', name: 'actuate', namespace: NS.XLINK},
     'xlink:arcrole': {prefix: 'xlink', name: 'arcrole', namespace: NS.XLINK},
     'xlink:href': {prefix: 'xlink', name: 'href', namespace: NS.XLINK},
@@ -90,7 +100,9 @@ const XML_ATTRS_ADJUSTMENT_MAP = {
 };
 
 //SVG tag names adjustment map
-export const SVG_TAG_NAMES_ADJUSTMENT_MAP = {
+export const SVG_TAG_NAMES_ADJUSTMENT_MAP: StringMap<string> = {
+    __proto__: null,
+
     'altglyph': 'altGlyph',
     'altglyphdef': 'altGlyphDef',
     'altglyphitem': 'altGlyphItem',
@@ -130,7 +142,7 @@ export const SVG_TAG_NAMES_ADJUSTMENT_MAP = {
 };
 
 //Tags that causes exit from foreign content
-const EXITS_FOREIGN_CONTENT = {
+const EXITS_FOREIGN_CONTENT: StringMap<boolean> = {
     __proto__: null,
 
     [$.B]: true,
@@ -180,17 +192,17 @@ const EXITS_FOREIGN_CONTENT = {
 };
 
 //Check exit from foreign content
-export function causesExit(startTagToken) {
+export function causesExit(startTagToken: StartTagToken) {
     const tn = startTagToken.tagName;
-    const isFontWithAttrs = tn === $.FONT && (Tokenizer.getTokenAttr(startTagToken, ATTRS.COLOR) !== null ||
-                                            Tokenizer.getTokenAttr(startTagToken, ATTRS.SIZE) !== null ||
-                                            Tokenizer.getTokenAttr(startTagToken, ATTRS.FACE) !== null);
+    const isFontWithAttrs = tn === $.FONT && (getTokenAttr(startTagToken, ATTRS.COLOR) !== null ||
+                                            getTokenAttr(startTagToken, ATTRS.SIZE) !== null ||
+                                            getTokenAttr(startTagToken, ATTRS.FACE) !== null);
 
     return isFontWithAttrs ? true : EXITS_FOREIGN_CONTENT[tn];
 }
 
 //Token adjustments
-export function adjustTokenMathMLAttrs(token) {
+export function adjustTokenMathMLAttrs(token: StartTagToken) {
     for (const attr of token.attrs) {
         if (attr.name === DEFINITION_URL_ATTR) {
             attr.name = ADJUSTED_DEFINITION_URL_ATTR;
@@ -199,7 +211,7 @@ export function adjustTokenMathMLAttrs(token) {
     }
 }
 
-export function adjustTokenSVGAttrs(token) {
+export function adjustTokenSVGAttrs(token: StartTagToken) {
     for (const attr of token.attrs) {
         const adjustedAttrName = SVG_ATTRS_ADJUSTMENT_MAP[attr.name];
 
@@ -208,7 +220,7 @@ export function adjustTokenSVGAttrs(token) {
     }
 }
 
-export function adjustTokenXMLAttrs(token) {
+export function adjustTokenXMLAttrs(token: StartTagToken) {
     for (const attr of token.attrs) {
         const adjustedAttrEntry = XML_ATTRS_ADJUSTMENT_MAP[attr.name];
 
@@ -220,7 +232,7 @@ export function adjustTokenXMLAttrs(token) {
     }
 }
 
-export function adjustTokenSVGTagName(token) {
+export function adjustTokenSVGTagName(token: StartTagToken) {
     const adjustedTagName = SVG_TAG_NAMES_ADJUSTMENT_MAP[token.tagName];
 
     if (adjustedTagName)
@@ -228,11 +240,11 @@ export function adjustTokenSVGTagName(token) {
 }
 
 //Integration points
-function isMathMLTextIntegrationPoint(tn, ns) {
+function isMathMLTextIntegrationPoint(tn: string, ns: NS) {
     return ns === NS.MATHML && (tn === $.MI || tn === $.MO || tn === $.MN || tn === $.MS || tn === $.MTEXT);
 }
 
-function isHtmlIntegrationPoint(tn, ns, attrs) {
+function isHtmlIntegrationPoint(tn: string, ns: NS, attrs: Attr[]) {
     if (ns === NS.MATHML && tn === $.ANNOTATION_XML) {
         for (const attr of attrs) {
             if (attr.name === ATTRS.ENCODING) {
@@ -246,7 +258,7 @@ function isHtmlIntegrationPoint(tn, ns, attrs) {
     return ns === NS.SVG && (tn === $.FOREIGN_OBJECT || tn === $.DESC || tn === $.TITLE);
 }
 
-export function isIntegrationPoint(tn, ns, attrs, foreignNS) {
+export function isIntegrationPoint(tn: string, ns: NS, attrs: Attr[], foreignNS?: NS) {
     if ((!foreignNS || foreignNS === NS.HTML) && isHtmlIntegrationPoint(tn, ns, attrs))
         return true;
 
